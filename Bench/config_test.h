@@ -9,7 +9,49 @@
 #define INST_LOOP_SIZE 256
 
 /*-------------------------------------------------------INTEL ISA------------------------------------------------------------------*/	
-#if defined (AVX512)
+//Sifive FU540 comprises U54 - RV64IMAFDC application cores with
+//an E51 - RV64IMAC monitor core 
+#if defined (RV64)
+	#define ISA "rv64"
+	#define NUM_REGISTER 32
+	#define REGISTER "x"
+	#define DP_ALIGN 32
+	#define SP_ALIGN 32
+	#define COBLERED "\"%%x0\",\"%%x1\",\"%%x2\",\"%%x3\",\"%%x4\",\"%%x5\",\"%%x6\",\"%%x7\",\"%%x8\",\"%%x9\",\"%%x10\",\"%%x11\",\"%%x12\",\"%%x13\",\"%%x14\",\"%%x15\",\"memory\""
+	#define DP_OPS 2
+	#define DP_DIV "divpd"
+	#define DP_ADD "addpd"
+	#define DP_MUL "mulpd"
+	#define DP_FMA "vfmadd132pd"
+	#define DP_MEM "movapd"
+
+	#define SP_OPS 4
+	#define SP_DIV "divps"
+	#define SP_ADD "addps"
+	#define SP_MUL "mulps"
+	#define SP_FMA "vfmadd132ps"
+	#define SP_MEM "movaps"
+#elif defined (RV32)
+	#define ISA "rv32"
+	#define NUM_REGISTER 32
+	#define REGISTER "x"
+	#define DP_ALIGN 16
+	#define SP_ALIGN 16
+	#define COBLERED "\"%%x0\",\"%%x1\",\"%%x2\",\"%%x3\",\"%%x4\",\"%%x5\",\"%%x6\",\"%%x7\",\"%%x8\",\"%%x9\",\"%%x10\",\"%%x11\",\"%%x12\",\"%%x13\",\"%%x14\",\"%%x15\",\"memory\""
+	#define DP_OPS 2
+	#define DP_DIV "divpd"
+	#define DP_ADD "addpd"
+	#define DP_MUL "mulpd"
+	#define DP_FMA "vfmadd132pd"
+	#define DP_MEM "movapd"
+
+	#define SP_OPS 4
+	#define SP_DIV "divps"
+	#define SP_ADD "addps"
+	#define SP_MUL "mulps"
+	#define SP_FMA "vfmadd132ps"
+	#define SP_MEM "movaps"
+#elif defined (AVX512)
 	#define ISA "avx512"
 	#define NUM_REGISTER 32
 	#define REGISTER "zmm"
