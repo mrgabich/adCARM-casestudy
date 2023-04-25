@@ -185,7 +185,7 @@ def main():
     parser = argparse.ArgumentParser(description='Script to run micro-benchmarks to construct Cache-Aware Roofline Model')
     parser.add_argument('--test', default='roofline', nargs='?', choices=['fp', 'mem', 'roofline'], help='Type of the test. Roofline test measures the bandwidth of the different memory levels and FP Performance (Default: roofline)')
     parser.add_argument('--inst', default='fma', nargs='?', choices=['fma', 'add', 'mul', 'div'], help='FP Instruction (Default: fma)')
-    parser.add_argument('--isa', default='avx512', nargs='?', choices=['avx512', 'avx', 'sse', 'scalar'], help='ISA (Default: avx512)')
+    parser.add_argument('--isa', default='avx512', nargs='?', choices=['avx512', 'avx256', 'avx', 'sse', 'scalar'], help='ISA (Default: avx512)')
     parser.add_argument('-p', '--precision', default='dp', nargs='?', choices=['dp', 'sp'], help='Data Precision (Default: dp)')
     parser.add_argument('-ldst', '--ld_st_ratio',  default=2, nargs='?', type = int, help='Load/Store Ratio (Default: 2)')
     parser.add_argument('--only_ld',  dest='only_ld', action='store_const', const=1, default=0, help='Run only loads in mem test (ld_st_ratio is ignored)')
