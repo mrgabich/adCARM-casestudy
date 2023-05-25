@@ -8,8 +8,8 @@ import numpy as np
 import datetime
 
 #Mapping between ISA and memory transfer size
-mem_inst_size = {"avx512": {"sp": 64, "dp": 64}, "avx": {"sp": 32, "dp": 32}, "sse": {"sp": 16, "dp": 16}, "scalar": {"sp": 4, "dp": 8}}
-ops_fp = {"avx512": {"sp": 16, "dp": 8}, "avx": {"sp": 8, "dp": 4}, "sse": {"sp": 4, "dp": 2}, "scalar": {"sp": 1, "dp": 1}}
+mem_inst_size = {"avx512": {"sp": 64, "dp": 64}, "avx256": {"sp": 32, "dp": 32}, "avx": {"sp": 32, "dp": 32}, "sse": {"sp": 16, "dp": 16}, "scalar": {"sp": 4, "dp": 8}}
+ops_fp = {"avx512": {"sp": 16, "dp": 8}, "avx256": {"sp": 8, "dp": 4}, "avx": {"sp": 8, "dp": 4}, "sse": {"sp": 4, "dp": 2}, "scalar": {"sp": 1, "dp": 1}}
 
 #Read system configuration file
 def read_config(config_file):
@@ -52,7 +52,8 @@ def plot_roofline(name, data, ct):
     fig, ax = plt.subplots(figsize=(7.1875*1.5,3.75*1.5))
     ai = np.linspace(0.00390625, 256, num=200000)
     plt.xlim(0.00390625, 256)
-    plt.ylim(carm_eq(ai, data['DRAM'], data['FP']), round_power_of_2(int(data['FP']*1.1)))
+    ylimits = carm_eq(ai, data['DRAM'], data['FP'])
+    plt.ylim(ylimits.min(), round_power_of_2(int(data['FP']*1.1)))
     #Ploting Lines
     plt.plot(ai, carm_eq(ai, data['L1'], data['FP']), 'k', lw = 3, label='L1')
     plt.plot(ai, carm_eq(ai, data['L2'], data['FP']), 'grey', lw = 3, label='L2')
@@ -68,8 +69,8 @@ def plot_roofline(name, data, ct):
     plt.xlabel('Arithmetic Intensity [flops/bytes]', fontsize=18)
     plt.setp(ax.get_xticklabels(), fontsize=18)
     plt.setp(ax.get_yticklabels(), fontsize=18)
-    plt.yscale('log', basey=2)
-    plt.xscale('log', basex=2)
+    plt.yscale('log', base=2)
+    plt.xscale('log', base=2)
     plt.legend(fontsize=18, loc='lower right')
     new_rc_params = {'text.usetex': False,"svg.fonttype": 'none'}
     plt.rcParams.update(new_rc_params)
@@ -185,7 +186,8 @@ def main():
     parser = argparse.ArgumentParser(description='Script to run micro-benchmarks to construct Cache-Aware Roofline Model')
     parser.add_argument('--test', default='roofline', nargs='?', choices=['fp', 'mem', 'roofline'], help='Type of the test. Roofline test measures the bandwidth of the different memory levels and FP Performance (Default: roofline)')
     parser.add_argument('--inst', default='fma', nargs='?', choices=['fma', 'add', 'mul', 'div'], help='FP Instruction (Default: fma)')
-    parser.add_argument('--isa', default='avx', nargs='?', choices=['rv64', 'rv32', 'avx512', 'avx256', 'avx', 'sse', 'scalar'], help='ISA (Default: avx512)')
+    parser.add_argument('--arch', default='amd64', nargs='?', choices=['amd64', 'rv64', 'rv32', 'arm64', 'arm32'], help='Arch (Default: amd64)')
+    parser.add_argument('--isa', default='avx', nargs='?', choices=['avx512', 'avx256', 'avx', 'sse', 'scalar'], help='ISA (Default: avx)')
     parser.add_argument('-p', '--precision', default='dp', nargs='?', choices=['dp', 'sp'], help='Data Precision (Default: dp)')
     parser.add_argument('-ldst', '--ld_st_ratio',  default=2, nargs='?', type = int, help='Load/Store Ratio (Default: 2)')
     parser.add_argument('--only_ld',  dest='only_ld', action='store_const', const=1, default=0, help='Run only loads in mem test (ld_st_ratio is ignored)')

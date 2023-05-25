@@ -1,4 +1,6 @@
-# adCARM
+# adCARM-casestudy
+
+This is a fork from adCARM which targets performance modeling for RISC-V based systems.
 
 <p>
   <a href="https://doi.org/10.1109/L-CA.2013.6" alt="Publication">
@@ -62,6 +64,11 @@ For additional information regarding the input arguments, run the command:
 ```
 python run.py -h
 ```
+
+## Fixed issues
+
+Fixed avx and avx 256 difference.
+Fixed fma sse operations.
 
 ## In papers and reports, please refer to this tool as follows
 

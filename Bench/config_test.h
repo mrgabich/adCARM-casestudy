@@ -72,7 +72,7 @@
 	#define SP_FMA "vfmadd132ps"
 	#define SP_MEM "vmovaps"
 #elif defined (AVX256)
-	#define ISA "avx"
+	#define ISA "avx256"
 	#define NUM_REGISTER 32
 	#define REGISTER "ymm"
 	#define DP_ALIGN 32
