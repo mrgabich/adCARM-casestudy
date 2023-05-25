@@ -52,7 +52,8 @@ def plot_roofline(name, data, ct):
     fig, ax = plt.subplots(figsize=(7.1875*1.5,3.75*1.5))
     ai = np.linspace(0.00390625, 256, num=200000)
     plt.xlim(0.00390625, 256)
-    plt.ylim(carm_eq(ai, data['DRAM'], data['FP']), round_power_of_2(int(data['FP']*1.1)))
+    ylimits = carm_eq(ai, data['DRAM'], data['FP'])
+    plt.ylim(ylimits.min(), round_power_of_2(int(data['FP']*1.1)))
     #Ploting Lines
     plt.plot(ai, carm_eq(ai, data['L1'], data['FP']), 'k', lw = 3, label='L1')
     plt.plot(ai, carm_eq(ai, data['L2'], data['FP']), 'grey', lw = 3, label='L2')
