@@ -7,6 +7,7 @@
 void create_benchmark_flops(char * op, char * precision, int long long fp){
 	int sys_out;
 	int flops;
+	char command[128];
 	char * assembly_op_flops_1, * assembly_op_flops_2;
 	
 	if(strcmp(op,"mad") == 0){
@@ -22,7 +23,8 @@ void create_benchmark_flops(char * op, char * precision, int long long fp){
 	free(assembly_op_flops_1);
 	if(strcmp(op,"mad") == 0) free(assembly_op_flops_2);
 	
-	sys_out = system("make -f Test/Makefile_Benchmark");
+	sprintf(command,"make isa=%s -f Test/Makefile_Benchmark\n",ISA);
+	sys_out = system(command);
 	if (sys_out == -1) printf("ERROR: Make %s FP test failed!\n",ISA);
 }
 
@@ -32,6 +34,7 @@ void create_benchmark_flops(char * op, char * precision, int long long fp){
 
 void create_benchmark_mem(int long long num_rep, int num_ld, int num_st, char * precision){
 	int sys_out;
+	char command[128];
 	char * assembly_op;
 	int align, ops;
 	
@@ -41,7 +44,8 @@ void create_benchmark_mem(int long long num_rep, int num_ld, int num_st, char * 
 		
 	//Free auxiliary variables
 	free(assembly_op);
-	
-	sys_out = system("make -f Test/Makefile_Benchmark");
+	sprintf(command,"make isa=%s -f Test/Makefile_Benchmark\n",ISA);
+	sys_out = system(command);
+	//sys_out = system("make -f Test/Makefile_Benchmark");
 	if (sys_out == -1) printf("ERROR: Make %s MEM test failed!\n",ISA);
 }

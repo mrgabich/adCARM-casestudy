@@ -9,8 +9,12 @@ else ifeq ($(isa),avx256)
 	FLAGS += -DAVX256
 else ifeq ($(isa),avx512)
 	FLAGS += -DAVX512
-else
+else ifeq ($(isa),scalar)
 	FLAGS += -DSCALAR
+else ifeq ($(isa),rv64)
+	FLAGS += -DRV -DRV64 -DFP
+else
+	FLAGS += -DARMV7A
 endif
 
 Bench:

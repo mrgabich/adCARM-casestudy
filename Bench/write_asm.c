@@ -59,7 +59,23 @@ void write_asm_fp (int long long fp, char * op, int flops, char * assembly_op_fl
 			if(i % NUM_REGISTER == 0){
 				j = 0;
 			}
-			#if defined(AVX) || defined(AVX256) || defined(AVX512) || defined(SSE)
+			#if defined(RV64)
+				if(strcmp(op,"div") == 0){
+					fprintf(file,"\t\t\"%s %%%%%s0, %%%%%s%d, %%%%%s%d\\n\\t\\t\"\n", assembly_op_flops_1, REGISTER, REGISTER, j, REGISTER, j);
+				}else if(strcmp(op,"mad") == 0){
+					if(j  >= NUM_REGISTER){
+						j = 0;
+					}
+					fprintf(file,"\t\t\"%s %%%%%s%d, %%%%%s%d, %%%%%s%d\\n\\t\\t\"\n", assembly_op_flops_1, REGISTER, j, REGISTER, j, REGISTER, j);
+					j++;
+					if(j  >= NUM_REGISTER){
+						j = 0;
+					}
+					fprintf(file,"\t\t\"%s %%%%%s%d, %%%%%s%d, %%%%%s%d\\n\\t\\t\"\n", assembly_op_flops_2, REGISTER, j, REGISTER, j, REGISTER, j);
+				}else{	
+					fprintf(file,"\t\t\"%s %%%%%s%d, %%%%%s%d, %%%%%s%d\\n\\t\\t\"\n", assembly_op_flops_1, REGISTER, j, REGISTER, j, REGISTER, j);
+				}	
+			#elif defined(AVX) || defined(AVX256) || defined(AVX512) || defined(SSE)
 				if(strcmp(op,"div") == 0){
 					fprintf(file,"\t\t\"%s %%%%%s0, %%%%%s%d, %%%%%s%d\\n\\t\\t\"\n", assembly_op_flops_1, REGISTER, REGISTER, j, REGISTER, j);
 				}else if(strcmp(op,"mad") == 0){
@@ -105,7 +121,23 @@ void write_asm_fp (int long long fp, char * op, int flops, char * assembly_op_fl
 		if(i % 16 == 0){
 			j = 0;
 		}
-		#if defined (AVX512) || defined (AVX256) || defined (AVX)
+		#if defined(RV64)
+			if(strcmp(op,"div") == 0){
+				fprintf(file,"\t\t\"%s %%%%%s0, %%%%%s%d, %%%%%s%d\\n\\t\\t\"\n", assembly_op_flops_1, REGISTER, REGISTER, j, REGISTER, j);
+			}else if(strcmp(op,"mad") == 0){
+				if(j  >= NUM_REGISTER){
+					j = 0;
+				}
+				fprintf(file,"\t\t\"%s %%%%%s%d, %%%%%s%d, %%%%%s%d\\n\\t\\t\"\n", assembly_op_flops_1, REGISTER, j, REGISTER, j, REGISTER, j);
+				j++;
+				if(j  >= NUM_REGISTER){
+					j = 0;
+				}
+				fprintf(file,"\t\t\"%s %%%%%s%d, %%%%%s%d, %%%%%s%d\\n\\t\\t\"\n", assembly_op_flops_2, REGISTER, j, REGISTER, j, REGISTER, j);
+			}else{	
+				fprintf(file,"\t\t\"%s %%%%%s%d, %%%%%s%d, %%%%%s%d\\n\\t\\t\"\n", assembly_op_flops_1, REGISTER, j, REGISTER, j, REGISTER, j);
+			}	
+		#elif defined (AVX512) || defined (AVX256) || defined (AVX)
 			if(strcmp(op,"div") == 0){
 				fprintf(file,"\t\t\"%s %%%%%s0, %%%%%s%d, %%%%%s%d\\n\\t\\t\"\n", assembly_op_flops_1, REGISTER, REGISTER, j, REGISTER, j);
 			}else if(strcmp(op,"mad") == 0){
@@ -195,8 +227,139 @@ void write_asm_mem (int long long num_rep, int align, int ops, int num_ld, int n
 	
 	//Create Test Function
 	fprintf(file,"static inline __attribute__((always_inline)) void test_function(PRECISION * test_var, int long long num_reps_t){\n");
-	
 	fprintf(file,"\t__asm__ __volatile__ (\n");
+
+#if defined(RV64)
+	fprintf(file,"\t\t\"ld t2, %%0\\n\\t\\t\"\t\t\n"); // Move num_reps_t to t2
+	fprintf(file,"\t\t\"Loop2_%%=:\\n\\t\\t\"\n"); //outer loop
+	fprintf(file,"\t\t\"ld t0, %%1\\n\\t\\t\"\n"); // Load the address of test_var into t0
+	if(iter > 1){
+		fprintf(file,"\t\t\"li t0, %lld\\n\\t\\t\"\n",iter); //Load the immediate loop size to t0
+		fprintf(file,"\t\t\"Loop1_%%=:\\n\\t\\t\"\n"); //inner loop
+		for(i = 0; i < num_aux; i++){
+				for(k = 0;k < num_ld;k++){
+					if(j  >= NUM_REGISTER){
+						j = 0;
+					}
+					fprintf(file,"\t\t\"ld a0, %d(t0)\\n\\t\\t\"\n", offset); // move from t0
+					fprintf(file,"\t\t\"%s %s%d, fa0\\n\\t\\t\"\n", assembly_op, REGISTER, j); // move from t0
+					j++;
+					offset += align;
+				}
+				for(k = 0;k < num_st;k++){
+					if(j  >= NUM_REGISTER){
+						j = 0;
+					}
+					fprintf(file,"\t\t\"ld t0, %d(t0)\\n\\t\\t\"\n", offset); // move from t0
+					fprintf(file,"\t\t\"%s %s%d, t0\\n\\t\\t\"\n", assembly_op, REGISTER, j); // move from t0
+					j++;
+					offset += align;
+				}
+				aux -= iter;
+		}
+		fprintf(file,"\t\t\"addi t0, t0, %d\\n\\t\\t\"\n",offset); // Increment t0 with offset
+		fprintf(file,"\t\t\"addi t1, t1, -1\\n\\t\\t\"\n"); // Decrement t1 by 1 (loop control)
+		fprintf(file,"\t\t\"bnez t1, Loop1_%%=\\n\\t\\t\"\n"); // Jump to Loop1_ if t1 is not equal to zero
+	}
+	
+	num_rep = aux;
+	offset = 0;
+	
+	for(i = 0; i < num_rep; i++){
+		for(k = 0;k < num_ld;k++){
+			if(j  >= NUM_REGISTER){
+				j = 0;
+			}
+			fprintf(file,"\t\t\"ld t0, %d(t0)\\n\\t\\t\"\n", offset); // move from t0
+			fprintf(file,"\t\t\"%s %s%d, t0\\n\\t\\t\"\n", assembly_op, REGISTER, j); // move from t0
+			j++;
+			offset += align;
+			
+		}
+		for(k = 0;k < num_st;k++){
+			if(j  >= NUM_REGISTER){
+				j = 0;
+			}
+			fprintf(file,"\t\t\"ld t0, %d(t0)\\n\\t\\t\"\n", offset); // move from t0
+			fprintf(file,"\t\t\"%s %s%d, t0\\n\\t\\t\"\n", assembly_op, REGISTER, j); // move from t0
+			j++;
+			offset += align;
+		}
+	}
+	fprintf(file,"\t\t\"addi t2, t2, -1\\n\\t\\t\"\n"); // Decrement t2 by 1 (loop control)
+	fprintf(file,"\t\t\"bnez t2, Loop2_%%=\\n\\t\\t\"\n"); // Jump to Loop2_ if t2 is not equal to zero
+
+	//End Test Function
+	fprintf(file,"\t\t:\n\t\t:\"r\"(num_reps_t),\"r\" (test_var)\n\t\t:\"%%t0\",\"%%t2\",\"%%t1\","COBLERED"\n\t);\n");
+
+#elif defined(armv7a)
+
+	fprintf(file,"\t\t\"mov %%0, r8\\n\\t\\t\"\t\t\n"); // Move num_reps_t to r8
+	fprintf(file,"\t\t\"Loop2_%%=:\\n\\t\\t\"\n"); //outer loop
+	fprintf(file,"\t\t\"mov %%1, r0\\n\\t\\t\"\n"); // Load the address of test_var into r0
+	if(iter > 1){
+		fprintf(file,"\t\t\"mov $%lld, r1\\n\\t\\t\"\n",iter); //Load the immediate loop size to t0
+		fprintf(file,"\t\t\"Loop1_%%=:\\n\\t\\t\"\n"); //inner loop
+		for(i = 0; i < num_aux; i++){
+				for(k = 0;k < num_ld;k++){
+					if(j  >= NUM_REGISTER){
+						j = 0;
+					}
+					//TODO
+					//fprintf(file,"\t\t\"%s %s%d, %d(a0)\\n\\t\\t\"\n", assembly_op, offset, REGISTER,j); // move from a0
+					j++;
+					offset += align;
+				}
+				for(k = 0;k < num_st;k++){
+					if(j  >= NUM_REGISTER){
+						j = 0;
+					}
+					//TODO
+					//fprintf(file,"\t\t\"%s %d(a0), %s%d\\n\\t\\t\"\n", assembly_op, REGISTER, j, offset); // move to a0
+					j++;
+					offset += align;
+				}
+				aux -= iter;
+		}
+		fprintf(file,"\t\t\"add r0, r0, #%d\\n\\t\\t\"\n",offset); // Increment a0 with offset
+		fprintf(file,"\t\t\"sub r1, r1, #%1\\n\\t\\t\"\n"); // Decrement t1 by 1 (loop control)
+		fprintf(file,"\t\t\"cmp r1, #%0\\n\\t\\t\"\n"); // Compare r1 with 0
+		fprintf(file,"\t\t\"bne Loop1_%%=\\n\\t\\t\"\n"); // Jump to Loop1_ if t1 is not equal to zero
+	}
+
+	num_rep = aux;
+	offset = 0;
+
+	for(i = 0; i < num_rep; i++){
+		for(k = 0;k < num_ld;k++){
+			if(j  >= NUM_REGISTER){
+				j = 0;
+			}
+			//TODO
+			//fprintf(file,"\t\t\"%s %s%d, %d(a0)\\n\\t\\t\"\n", assembly_op, offset, REGISTER,j);
+			j++;
+			offset += align;
+			
+		}
+		for(k = 0;k < num_st;k++){
+			if(j  >= NUM_REGISTER){
+				j = 0;
+			}
+			//TODO
+			//fprintf(file,"\t\t\"%s %d(a0), %s%d\\n\\t\\t\"\n", assembly_op, REGISTER, j, offset);
+			j++;
+			offset += align;
+		}
+	}
+	fprintf(file,"\t\t\"sub r8, r8, #%1\\n\\t\\t\"\n"); // Decrement t1 by 1 (loop control)
+	fprintf(file,"\t\t\"cmp r8, #%0\\n\\t\\t\"\n"); // Compare r8 with 0
+	fprintf(file,"\t\t\"bne Loop2_%%=\\n\\t\\t\"\n"); // Jump to Loop1_ if t1 is not equal to zero
+
+	//End Test Function
+	fprintf(file,"\t\t:\n\t\t:\"r\"(num_reps_t),\"r\" (test_var)\n\t\t:\"%%r0\",\"%%r1\",\"%%r8\","COBLERED"\n\t);\n");
+
+#else
+
 	fprintf(file,"\t\t\"movq %%0, %%%%r8\\n\\t\\t\"\n");
 	fprintf(file,"\t\t\"Loop2_%%=:\\n\\t\\t\"\n");
 	fprintf(file,"\t\t\"movq %%1, %%%%rax\\n\\t\\t\"\n");
@@ -258,7 +421,7 @@ void write_asm_mem (int long long num_rep, int align, int ops, int num_ld, int n
 	
 	//End Test Function
 	fprintf(file,"\t\t:\n\t\t:\"r\"(num_reps_t),\"r\" (test_var)\n\t\t:\"%%rax\",\"%%rdi\",\"%%r8\","COBLERED"\n\t);\n");
-	
+#endif
 	fprintf(file,"}\n\n");
 	
 	fclose(file_header);

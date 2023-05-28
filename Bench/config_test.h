@@ -26,7 +26,7 @@
 	#define REGISTER "f"
 	//#define REGISTER "x"
 	//#define COBLERED "\"%%x0\",\"%%x1\",\"%%x2\",\"%%x3\",\"%%x4\",\"%%x5\",\"%%x6\",\"%%x7\",\"%%x8\",\"%%x9\",\"%%x10\",\"%%x11\",\"%%x12\",\"%%x13\",\"%%x14\",\"%%x15\",\"memory\""
-	#define COBLERED "\"%%f0\",\"%%f1\",\"%%f2\",\"%%f3\",\"%%f4\",\"%%f5\",\"%%f6\",\"%%f7\",\"%%f8\",\"%%f9\",\"%%f10\",\"%%f11\",\"%%f12\",\"%%f13\",\"%%f14\",\"%%f15\",\"memory\""
+	#define COBLERED "\"f0\",\"f1\",\"f2\",\"f3\",\"f4\",\"f5\",\"f6\",\"f7\",\"f8\",\"f9\",\"f10\",\"f11\",\"f12\",\"f13\",\"f14\",\"f15\",\"memory\""
 	#define DP_OPS 2
 	#define DP_DIV "fdiv.d"
 	#define DP_ADD "fadd.d"
@@ -51,7 +51,28 @@
 	#define SP_FMA "fmadd"
 	#define SP_MEM "fmv"
 #endif
-#elif defined (AVX512)
+#elif defined (ARMV7A)
+	#define ISA "armv7a"
+	#define NUM_REGISTER 32
+	#define REGISTER "s"
+	//#define REGISTER "r"
+	//#define COBLERED "\"%r0\",\"%r1\",\"%r2\",\"%r3\",\"%r4\",\"%r5\",\"%r6\",\"%r7\",\"%r8\",\"%r9\",\"%r10\",\"%r11\",\"%r12\",\"%r13\",\"%r14\",\"%r15\",\"memory\""
+	#define COBLERED "\"%s0\",\"%s1\",\"%s2\",\"%s3\",\"%s4\",\"%s5\",\"%s6\",\"%s7\",\"%s8\",\"%s9\",\"%s10\",\"%s11\",\"%s12\",\"%s13\",\"%s14\",\"%s15\",\"memory\""
+	#define DP_OPS 2
+	#define DP_DIV "vdiv.f64"
+	#define DP_ADD "vadd.f64"
+	#define DP_MUL "vmul.f64"
+	#define DP_FMA "vfma.f64"
+	#define DP_MEM "vmov.f64"
+
+	#define SP_OPS 4
+	#define SP_DIV "vdiv.f32"
+	#define SP_ADD "vadd.f32"
+	#define SP_MUL "vmul.f32"
+	#define SP_FMA "vfma.f32"
+	#define SP_MEM "vmov.f32"
+#else // defined (amd64)
+#if defined (AVX512)
 	#define ISA "avx512"
 	#define NUM_REGISTER 32
 	#define REGISTER "zmm"
@@ -152,5 +173,6 @@
 	#define SP_MUL "vmulss"
 	#define SP_FMA "vfmadd132ss"
 	#define SP_MEM "movss"
+#endif
 #endif
 

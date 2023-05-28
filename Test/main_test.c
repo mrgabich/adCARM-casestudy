@@ -7,10 +7,13 @@
 #include <sys/resource.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <sched.h>
 #include <stdint.h>
 #include <pthread.h>
-#include <mm_malloc.h>
+#if !defined(RV64)
+	#include <mm_malloc.h>
+#endif
 #include <math.h>
 #include <stdbool.h>
 
@@ -65,6 +68,96 @@ int long long median(int n, int long long x[]){
 	return val;
 }
 
+#if defined(RV64)
+static inline void serialize() {
+    asm volatile (
+        "li t0, 0 \n"   // Load zero into temporary register t0
+        "mv a0, t0 \n"  // Move the value in t0 to register a0
+        "li a1, 0 \n"   // Load zero into register a1
+        "li a2, 0 \n"   // Load zero into register a2
+        "li a3, 0 \n"   // Load zero into register a3
+        "li a4, 0 \n"   // Load zero into register a4
+        "li a5, 0 \n"   // Load zero into register a5
+        "li a6, 0 \n"   // Load zero into register a6
+        "li a7, 0 \n"   // Load zero into register a7
+        "ecall \n"      // Execute a system call to ensure serialization
+    );
+}
+
+static inline long long read_tsc_start() {
+    uint64_t d, a;
+    asm volatile (
+        "li a7, 10 \n"         // Set a7 (function code) to 10 for RDCYCLE instruction
+        "ecall \n"             // Execute a system call to read the cycle counter
+        "mv %0, a0 \n"         // Move the value in register a0 to variable d
+        "li a7, 11 \n"         // Set a7 (function code) to 11 for RDTSC instruction
+        "ecall \n"             // Execute a system call to read the time-stamp counter
+        "mv %1, a0 \n"         // Move the value in register a0 to variable a
+        : "=r" (d), "=r" (a)   // Output operands
+        :
+        : "a0", "a7"           // Clobbered registers
+    );
+
+    return ((long long)d << 32 | a);
+}
+
+static inline long long read_tsc_end() {
+    uint64_t d, a;
+    asm volatile (
+        "li a7, 11 \n"         // Set a7 (function code) to 11 for RDTSC instruction
+        "ecall \n"             // Execute a system call to read the time-stamp counter
+        "mv %0, a0 \n"         // Move the value in register a0 to variable d
+        "li a7, 10 \n"         // Set a7 (function code) to 10 for RDCYCLE instruction
+        "ecall \n"             // Execute a system call to read the cycle counter
+        "mv %1, a0 \n"         // Move the value in register a0 to variable a
+        : "=r" (d), "=r" (a)   // Output operands
+        :
+        : "a0", "a7"           // Clobbered registers
+    );
+
+    return ((long long)d << 32 | a);
+}
+
+#elif defined(ARMV7A)
+
+static inline void serialize() {
+    asm volatile (
+        "mov r0, #0 \n"     // Load zero into register r0
+        "mov r1, #0 \n"     // Load zero into register r1
+        "mov r2, #0 \n"     // Load zero into register r2
+        "mov r3, #0 \n"     // Load zero into register r3
+        "mcr p15, 0, r0, c7, c5, 0 \n"  // Execute a system instruction to ensure serialization
+    );
+}
+
+static inline long long read_tsc_start() {
+    uint32_t d, a;
+    asm volatile (
+        "mrc p15, 0, %0, c9, c13, 0 \n"   // Read the cycle counter into variable d
+        "mrc p15, 0, %1, c9, c13, 1 \n"   // Read the time-stamp counter into variable a
+        : "=r" (d), "=r" (a)              // Output operands
+        :
+        :
+    );
+
+    return ((long long)d << 32 | a);
+}
+
+static inline long long read_tsc_end() {
+    uint32_t d, a;
+    asm volatile (
+        "mrc p15, 0, %1, c9, c13, 1 \n"   // Read the time-stamp counter into variable a
+        "mrc p15, 0, %0, c9, c13, 0 \n"   // Read the cycle counter into variable d
+        : "=r" (d), "=r" (a)              // Output operands
+        :
+        :
+    );
+
+    return ((long long)d << 32 | a);
+}
+
+#else
+
 static  inline void serialize(){
 	asm volatile ( "xorl %%eax, %%eax \n cpuid " : : : "%eax","%ebx","%ecx","%edx" );
 }
@@ -101,6 +194,8 @@ static inline long long read_tsc_end(){
 	return ((long long)d << 32 | a);
 }
 
+#endif
+
 pthread_attr_t attr;
 pthread_barrier_t bar;
 pthread_mutex_t mutexsum;
@@ -128,12 +223,22 @@ void * benchmark_test(void *t_args){
 	volatile long long tsc_s;
 	volatile long long tsc_e;
 	
-	#if defined (MEM) || defined (DIV)
+#if defined (MEM) || defined (DIV)
+	#if defined (RV64)
+		PRECISION *test_var = (PRECISION*) calloc(NUM_REP*OPS*(NUM_LD+NUM_ST), sizeof(PRECISION));
+		if (test_var == NULL) {
+			// handle error here
+		}
+		for (i = 0; i < NUM_REP*OPS*(NUM_LD+NUM_ST); i++) {
+			test_var[i] = 1;
+		}
+	#else
 		PRECISION * test_var = (PRECISION*)_mm_malloc(NUM_REP*OPS*(NUM_LD+NUM_ST)*sizeof(PRECISION),ALIGN);
 		for(i=0; i< NUM_REP*OPS*(NUM_LD+NUM_ST); i++){
 			test_var[i] = 1;
 		}
 	#endif 
+#endif 
 	
 	pthread_barrier_wait(&bar);
 	
@@ -210,9 +315,13 @@ void * benchmark_test(void *t_args){
 	
 	serialize();
 	
-	#if defined (MEM) || defined (DIV)
+#if defined (MEM) || defined (DIV)
+	#if defined (RV64)
+		free(test_var);
+	#else
 		_mm_free(test_var);
 	#endif
+#endif
 	
 	pthread_exit(NULL);
 }
