@@ -25,7 +25,10 @@ void create_benchmark_flops(char * op, char * precision, int long long fp){
 	
 	sprintf(command,"make isa=%s -f Test/Makefile_Benchmark\n",ISA);
 	sys_out = system(command);
-	if (sys_out == -1) printf("ERROR: Make %s FP test failed!\n",ISA);
+	if (sys_out != 0) {
+		printf("ERROR: Make %s FP test failed!\n",ISA);
+		exit(2);
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -46,6 +49,8 @@ void create_benchmark_mem(int long long num_rep, int num_ld, int num_st, char * 
 	free(assembly_op);
 	sprintf(command,"make isa=%s -f Test/Makefile_Benchmark\n",ISA);
 	sys_out = system(command);
-	//sys_out = system("make -f Test/Makefile_Benchmark");
-	if (sys_out == -1) printf("ERROR: Make %s MEM test failed!\n",ISA);
+	if (sys_out != 0) {
+		printf("ERROR: Make %s MEM test failed!\n",ISA);
+		exit(3);
+	}
 }

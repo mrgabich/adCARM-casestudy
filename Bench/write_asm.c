@@ -231,66 +231,45 @@ void write_asm_mem (int long long num_rep, int align, int ops, int num_ld, int n
 
 #if defined(RV64)
 	fprintf(file,"\t\t\"ld t2, %%0\\n\\t\\t\"\t\t\n"); // Move num_reps_t to t2
-	fprintf(file,"\t\t\"Loop2_%%=:\\n\\t\\t\"\n"); //outer loop
-	fprintf(file,"\t\t\"ld t0, %%1\\n\\t\\t\"\n"); // Load the address of test_var into t0
+	fprintf(file,"\t\t\"ld a0, %%1\\n\\t\\t\"\n"); // Load the address of test_var into t0
+	fprintf(file,"\t\t\"outer_loop_%%=:\\n\\t\\t\"\n"); //outer loop
 	if(iter > 1){
-		fprintf(file,"\t\t\"li t0, %lld\\n\\t\\t\"\n",iter); //Load the immediate loop size to t0
-		fprintf(file,"\t\t\"Loop1_%%=:\\n\\t\\t\"\n"); //inner loop
-		for(i = 0; i < num_aux; i++){
-				for(k = 0;k < num_ld;k++){
-					if(j  >= NUM_REGISTER){
-						j = 0;
-					}
-					fprintf(file,"\t\t\"ld a0, %d(t0)\\n\\t\\t\"\n", offset); // move from t0
-					fprintf(file,"\t\t\"%s %s%d, fa0\\n\\t\\t\"\n", assembly_op, REGISTER, j); // move from t0
-					j++;
-					offset += align;
+		fprintf(file,"\t\t\"li t1, %lld\\n\\t\\t\"\n",iter); //Load the immediate loop size to t0
+		fprintf(file,"\t\t\"beqz t1, outer_loop_exit_%%=\\n\\t\\t\"\n"); //Load the immediate loop size to t0
+		fprintf(file,"\t\t\"inner_loop_%%=:\\n\\t\\t\"\n"); //inner loop
+	}
+		for(i = 0; i < num_aux-1; i++){
+			for(k = 0;k < num_ld;k++){
+				if(j  >= NUM_REGISTER){
+					j = 0;
 				}
-				for(k = 0;k < num_st;k++){
-					if(j  >= NUM_REGISTER){
-						j = 0;
-					}
-					fprintf(file,"\t\t\"ld t0, %d(t0)\\n\\t\\t\"\n", offset); // move from t0
-					fprintf(file,"\t\t\"%s %s%d, t0\\n\\t\\t\"\n", assembly_op, REGISTER, j); // move from t0
-					j++;
-					offset += align;
+				//fprintf(file,"\t\t\"ld a0, %d(t0)\\n\\t\\t\"\n", offset); // move from t0
+				fprintf(file,"\t\t\"fld %s%d, %d(a0)\\n\\t\\t\"\n", REGISTER, j, offset); // move from t0
+				j++;
+				offset += align;
+			}
+			for(k = 0;k < num_st;k++){
+				if(j  >= NUM_REGISTER){
+					j = 0;
 				}
-				aux -= iter;
+				//fprintf(file,"\t\t\"ld t0, %d(t0)\\n\\t\\t\"\n", offset); // move from t0
+				fprintf(file,"\t\t\"fsd %s%d, %d(a0)\\n\\t\\t\"\n", REGISTER, j, offset); // move from t0
+				j++;
+				offset += align;
+			}
+			aux -= iter;
 		}
-		fprintf(file,"\t\t\"addi t0, t0, %d\\n\\t\\t\"\n",offset); // Increment t0 with offset
+		fprintf(file,"\t\t\"addi a0, a0, %d\\n\\t\\t\"\n",offset); // Increment t0 with offset
+	if(iter > 1){
 		fprintf(file,"\t\t\"addi t1, t1, -1\\n\\t\\t\"\n"); // Decrement t1 by 1 (loop control)
-		fprintf(file,"\t\t\"bnez t1, Loop1_%%=\\n\\t\\t\"\n"); // Jump to Loop1_ if t1 is not equal to zero
+		fprintf(file,"\t\t\"bnez t1, inner_loop_%%=\\n\\t\\t\"\n"); // Jump to Loop1_ if t1 is not equal to zero
 	}
-	
-	num_rep = aux;
-	offset = 0;
-	
-	for(i = 0; i < num_rep; i++){
-		for(k = 0;k < num_ld;k++){
-			if(j  >= NUM_REGISTER){
-				j = 0;
-			}
-			fprintf(file,"\t\t\"ld t0, %d(t0)\\n\\t\\t\"\n", offset); // move from t0
-			fprintf(file,"\t\t\"%s %s%d, t0\\n\\t\\t\"\n", assembly_op, REGISTER, j); // move from t0
-			j++;
-			offset += align;
-			
-		}
-		for(k = 0;k < num_st;k++){
-			if(j  >= NUM_REGISTER){
-				j = 0;
-			}
-			fprintf(file,"\t\t\"ld t0, %d(t0)\\n\\t\\t\"\n", offset); // move from t0
-			fprintf(file,"\t\t\"%s %s%d, t0\\n\\t\\t\"\n", assembly_op, REGISTER, j); // move from t0
-			j++;
-			offset += align;
-		}
-	}
+	fprintf(file,"\t\t\"outer_loop_exit_%%=:\\n\\t\\t\"\n"); // Outer Loop Exit	
 	fprintf(file,"\t\t\"addi t2, t2, -1\\n\\t\\t\"\n"); // Decrement t2 by 1 (loop control)
-	fprintf(file,"\t\t\"bnez t2, Loop2_%%=\\n\\t\\t\"\n"); // Jump to Loop2_ if t2 is not equal to zero
+	fprintf(file,"\t\t\"bnez t2, outer_loop_%%=\\n\\t\\t\"\n"); // Jump to Loop2_ if t2 is not equal to zero
 
 	//End Test Function
-	fprintf(file,"\t\t:\n\t\t:\"r\"(num_reps_t),\"r\" (test_var)\n\t\t:\"%%t0\",\"%%t2\",\"%%t1\","COBLERED"\n\t);\n");
+	fprintf(file,"\t\t:\n\t\t:\"m\"(num_reps_t),\"m\" (test_var)\n\t\t:\"a0\",\"t1\",\"t2\","COBLERED"\n\t);\n");
 
 #elif defined(armv7a)
 

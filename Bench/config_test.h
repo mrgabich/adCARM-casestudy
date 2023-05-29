@@ -4,22 +4,23 @@
 #include "functions.h"
 #include <string.h>
 
-//Loop Body Size
-#define BASE_LOOP_SIZE 256
-#define INST_LOOP_SIZE 256
+
 
 /*-------------------------------------------------------INTEL ISA------------------------------------------------------------------*/	
 //Sifive FU540 comprises U54 - RV64IMAFDC application cores with
 //an E51 - RV64IMAC monitor core 
 #if defined (RV)
+	//Loop Body Size
+	#define BASE_LOOP_SIZE 64
+	#define INST_LOOP_SIZE 64
 #if defined (RV64)
 	#define ISA "rv64"
-	#define DP_ALIGN 32
-	#define SP_ALIGN 32
+	#define DP_ALIGN 8
+	#define SP_ALIGN 4
 #else //if defined (RV32)
 	#define ISA "rv32"
-	#define DP_ALIGN 16
-	#define SP_ALIGN 16
+	#define DP_ALIGN 2
+	#define SP_ALIGN 4
 #endif
 #if defined (FP)
 	#define NUM_REGISTER 32
@@ -72,6 +73,9 @@
 	#define SP_FMA "vfma.f32"
 	#define SP_MEM "vmov.f32"
 #else // defined (amd64)
+	//Loop Body Size
+	#define BASE_LOOP_SIZE 256
+	#define INST_LOOP_SIZE 256
 #if defined (AVX512)
 	#define ISA "avx512"
 	#define NUM_REGISTER 32
