@@ -157,11 +157,17 @@ static inline long long read_tsc_end() {
 }
 
 #else
-
+// Function: serialize()
+// Purpose: Serialize the execution of instructions on the CPU.
+//          Ensures that all preceding instructions are executed before proceeding.
 static  inline void serialize(){
 	asm volatile ( "xorl %%eax, %%eax \n cpuid " : : : "%eax","%ebx","%ecx","%edx" );
 }
 
+
+// Function: read_tsc_start()
+// Purpose: Read the Time Stamp Counter (TSC) value at the start of a specific interval.
+// Returns: The TSC value as a 64-bit long long integer.
 static  inline long long read_tsc_start(){
 	uint64_t d;
 	uint64_t a;
@@ -178,6 +184,9 @@ static  inline long long read_tsc_start(){
 	return ((long long)d << 32 | a);
 }
 
+// Function: read_tsc_end()
+// Purpose: Read the Time Stamp Counter (TSC) value at the end of a specific interval.
+// Returns: The TSC value as a 64-bit long long integer.
 static inline long long read_tsc_end(){
 	uint64_t d;
 	uint64_t a;

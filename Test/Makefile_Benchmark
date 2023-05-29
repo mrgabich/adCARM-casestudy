@@ -1,22 +1,27 @@
 ifeq ($(isa),sse)
 	FLAGS += -DSSE
 	COMPILER = gcc
+	OBJDUMP = objdump
 	CFLAGS = -g -Wall -Wextra -Ofast -march=native
 else ifeq ($(isa),avx)
 	FLAGS += -DAVX
 	COMPILER = gcc
+	OBJDUMP = objdump
 	CFLAGS = -g -Wall -Wextra -Ofast -march=native
 else ifeq ($(isa),avx256)
 	FLAGS += -DAVX256
 	COMPILER = gcc
+	OBJDUMP = objdump
 	CFLAGS = -g -Wall -Wextra -Ofast -march=native
 else ifeq ($(isa),avx512)
 	FLAGS += -DAVX512
 	COMPILER = gcc
+	OBJDUMP = objdump
 	CFLAGS = -g -Wall -Wextra -Ofast -march=native
 else ifeq ($(isa),scalar)
 	FLAGS += -DSCALAR
 	COMPILER = gcc
+	OBJDUMP = objdump
 	CFLAGS = -g -Wall -Wextra -Ofast -march=native
 else ifeq ($(isa),rv64)
 	FLAGS += -DRV -DRV64 -DFP
@@ -25,6 +30,9 @@ else ifeq ($(isa),rv64)
 	CFLAGS = -g -Wall -Wextra -Ofast -mabi=lp64d -march=rv64gc
 else
 	FLAGS += -DARMV7A
+	COMPILER = arm-linux-gnueabi-gcc
+	OBJDUMP = arm-linux-gnueabi-objdump
+	CFLAGS = -g -Wall -Wextra -Ofast -march=armv7-a -mcpu=cortex-a9 -mfpu=neon
 endif
 
 CFLAGS += -pthread $(FLAGS)
