@@ -1,2 +1,12 @@
 .vscode/
 Results
+Bench/Bench
+bin/test
+*.lst
+*.o
+*.so
+*.pyc
+*elf
+*swp
+*swo
+*stubs
