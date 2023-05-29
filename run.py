@@ -98,7 +98,7 @@ def run_roofline(name, freq, l1_size, l2_size, l3_size, inst, isa, precision, nu
     except subprocess.CalledProcessError as e:
         print(f'Error while compiling L1 MEM Test: {e}')
         sys.exit()
-    sys.exit()
+    
     if(interleaved):
         result = subprocess.run(["./bin/test", "-threads", str(threads), "-freq", freq, "--interleaved"], stdout=subprocess.PIPE)
     else:
