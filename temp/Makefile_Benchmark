@@ -30,5 +30,5 @@ endif
 CFLAGS += -pthread $(FLAGS)
 
 all:
-	$(COMPILER) $(CFLAGS) Test/main_test.c -o bin/test -lm
-	$(OBJDUMP) -d bin/test > bin/app.lst
+	$(COMPILER) $(CFLAGS) example.c -o example -lm
+	$(OBJDUMP) -d example > app.lst
