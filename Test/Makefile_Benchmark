@@ -21,6 +21,7 @@ else ifeq ($(isa),scalar)
 else ifeq ($(isa),rv64)
 	FLAGS += -DRV -DRV64 -DFP
 	COMPILER = riscv64-linux-gnu-gcc-12
+	OBJDUMP = riscv64-linux-gnu-objdump
 	CFLAGS = -g -Wall -Wextra -Ofast -mabi=lp64d -march=rv64gc
 else
 	FLAGS += -DARMV7A
@@ -30,3 +31,4 @@ CFLAGS += -pthread $(FLAGS)
 
 all:
 	$(COMPILER) $(CFLAGS) Test/main_test.c -o bin/test -lm
+	$(OBJDUMP) -d bin/test > app.lst

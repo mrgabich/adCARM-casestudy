@@ -11,7 +11,7 @@
 #include <sched.h>
 #include <stdint.h>
 #include <pthread.h>
-#if !defined(RV64)
+#ifndef RV64
 	#include <mm_malloc.h>
 #endif
 #include <math.h>
