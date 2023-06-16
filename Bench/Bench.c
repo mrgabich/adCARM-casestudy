@@ -29,6 +29,7 @@ int main (int argc, char*argv[]){
 			strcpy(operation, argv[i+1]);
 		}else if(strcmp(argv[i], "-fp") == 0){ 				//Number of FP INST per iteration
 			num_fp = atol(argv[i+1]);
+            printf("Number of FPs: %d\n",num_fp);
 		}else if(strcmp(argv[i], "-precision")==0){			//Select data precision
 			size_t len = strlen(argv[i+1]);
 			precision = (char*)  malloc(len+1);

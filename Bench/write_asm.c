@@ -43,7 +43,7 @@ void write_asm_fp (int long long fp, char * op, int flops, char * assembly_op_fl
 	
 	fprintf(file,"\t__asm__ __volatile__ (\n");
 #if defined(RV64)
-	fprintf(file,"\t\t\"ld t1, %%0\\n\\t\\t\"\n");
+	fprintf(file,"\t\t\"ld t2, %%0\\n\\t\\t\"\n");
 #else
 	fprintf(file,"\t\t\"movq %%0, %%%%r8\\n\\t\\t\"\n");
 #endif
@@ -51,9 +51,9 @@ void write_asm_fp (int long long fp, char * op, int flops, char * assembly_op_fl
 #if defined(RV64)
 		fprintf(file,"\t\t\"ld a0, %%1\\n\\t\\t\"\n");
 		if(strcmp(precision, "dp") == 0){
-			fprintf(file,"\t\t\"%s %%%%%s0, 0(a0)\\n\\t\\t\"\n", DP_MEM_LD, REGISTER);	
+			fprintf(file,"\t\t\"%s %s0, 0(a0)\\n\\t\\t\"\n", DP_MEM_LD, REGISTER);	
 		}else{
-			fprintf(file,"\t\t\"%s %%%%%s0, 0(a0)\\n\\t\\t\"\n", SP_MEM_LD, REGISTER);	
+			fprintf(file,"\t\t\"%s %s0, 0(a0)\\n\\t\\t\"\n", SP_MEM_LD, REGISTER);	
 		}
 #else
 		fprintf(file,"\t\t\"movq %%1, %%%%rax\\n\\t\\t\"\n");
@@ -64,11 +64,11 @@ void write_asm_fp (int long long fp, char * op, int flops, char * assembly_op_fl
 		}
 #endif
 	}
-	fprintf(file,"\t\t\"Loop2_%%=:\\n\\t\\t\"\n");
+	fprintf(file,"\t\t\"outer_loop_%%=:\\n\\t\\t\"\n");
 	if(iter > 1){
 #if defined(RV64)
-		fprintf(file,"\t\t\"li t2, %lld\\n\\t\\t\"\n",iter);
-		fprintf(file,"\t\t\"Loop1_%%=:\\n\\t\\t\"\n");
+		fprintf(file,"\t\t\"li t1, %lld\\n\\t\\t\"\n",iter);
+		fprintf(file,"\t\t\"inner_loop_%%=:\\n\\t\\t\"\n");
 #else
 		fprintf(file,"\t\t\"movl $%lld, %%%%edi\\n\\t\\t\"\n",iter);
 		fprintf(file,"\t\t\"Loop1_%%=:\\n\\t\\t\"\n");
@@ -132,8 +132,8 @@ void write_asm_fp (int long long fp, char * op, int flops, char * assembly_op_fl
 			fp -= iter;
 		}
 #if defined(RV64)
-		fprintf(file,"\t\t\"addi t2, t2, -1\\n\\t\\t\"\n");
-		fprintf(file,"\t\t\"bnez t2, Loop1_%%=\\n\\t\\t\"\n");
+		fprintf(file,"\t\t\"addi t1, t1, -1\\n\\t\\t\"\n");
+		fprintf(file,"\t\t\"bnez t1, inner_loop_%%=\\n\\t\\t\"\n");
 #else
 		fprintf(file,"\t\t\"subl $1, %%%%edi\\n\\t\\t\"\n");
 		fprintf(file,"\t\t\"jnz Loop1_%%=\\n\\t\\t\"\n");
@@ -198,8 +198,8 @@ void write_asm_fp (int long long fp, char * op, int flops, char * assembly_op_fl
 		j++;
 	}
 #if defined(RV64)
-	fprintf(file,"\t\t\"addi t1, t1, -1\\n\\t\\t\"\n");
-	fprintf(file,"\t\t\"bnez t1, Loop2_%%=\\n\\t\\t\"\n");
+	fprintf(file,"\t\t\"addi t2, t2, -1\\n\\t\\t\"\n");
+	fprintf(file,"\t\t\"bnez t2, outer_loop_%%=\\n\\t\\t\"\n");
 #else
 	fprintf(file,"\t\t\"sub $1, %%%%r8\\n\\t\\t\"\n");
 	fprintf(file,"\t\t\"jnz Loop2_%%=\\n\\t\\t\"\n");
@@ -207,9 +207,9 @@ void write_asm_fp (int long long fp, char * op, int flops, char * assembly_op_fl
 #if defined(RV64)
 	//End Test Function
 	if(strcmp(op,"div") == 0){
-		fprintf(file,"\t\t:\n\t\t:\"r\"(num_rep_max),\"r\" (test_var)\n\t\t:\"%%t1\",\"%%t2\","COBLERED"\n\t);\n");
+		fprintf(file,"\t\t:\n\t\t:\"m\"(num_rep_max),\"m\" (test_var)\n\t\t:\"%%t1\",\"%%t2\","COBLERED"\n\t);\n");
 	}else{
-		fprintf(file,"\t\t:\n\t\t:\"r\"(num_rep_max)\n\t\t:\"t1\",\"t2\","COBLERED"\n\t);\n");
+		fprintf(file,"\t\t:\n\t\t:\"m\"(num_rep_max)\n\t\t:\"t1\",\"t2\","COBLERED"\n\t);\n");
 	}
 #else
 	//End Test Function
@@ -269,7 +269,7 @@ void write_asm_mem (int long long num_rep, int align, int ops, int num_ld, int n
 	fprintf(file,"\t\t\"outer_loop_%%=:\\n\\t\\t\"\n"); //outer loop
 	if(iter > 1){
 		fprintf(file,"\t\t\"li t1, %lld\\n\\t\\t\"\n",iter); //Load the immediate loop size to t0
-		fprintf(file,"\t\t\"beqz t1, outer_loop_exit_%%=\\n\\t\\t\"\n"); //Load the immediate loop size to t0
+		//fprintf(file,"\t\t\"beqz t1, outer_loop_exit_%%=\\n\\t\\t\"\n"); //Load the immediate loop size to t0
 		fprintf(file,"\t\t\"inner_loop_%%=:\\n\\t\\t\"\n"); //inner loop
 	}
 		for(i = 0; i < num_aux; i++){
@@ -298,7 +298,7 @@ void write_asm_mem (int long long num_rep, int align, int ops, int num_ld, int n
 		fprintf(file,"\t\t\"addi t1, t1, -1\\n\\t\\t\"\n"); // Decrement t1 by 1 (loop control)
 		fprintf(file,"\t\t\"bnez t1, inner_loop_%%=\\n\\t\\t\"\n"); // Jump to Loop1_ if t1 is not equal to zero
 	}
-	fprintf(file,"\t\t\"outer_loop_exit_%%=:\\n\\t\\t\"\n"); // Outer Loop Exit	
+	//fprintf(file,"\t\t\"outer_loop_exit_%%=:\\n\\t\\t\"\n"); // Outer Loop Exit	
 	fprintf(file,"\t\t\"addi t2, t2, -1\\n\\t\\t\"\n"); // Decrement t2 by 1 (loop control)
 	fprintf(file,"\t\t\"bnez t2, outer_loop_%%=\\n\\t\\t\"\n"); // Jump to Loop2_ if t2 is not equal to zero
 
