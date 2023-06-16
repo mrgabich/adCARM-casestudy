@@ -42,19 +42,37 @@ void write_asm_fp (int long long fp, char * op, int flops, char * assembly_op_fl
 	}
 	
 	fprintf(file,"\t__asm__ __volatile__ (\n");
+#if defined(RV64)
+	fprintf(file,"\t\t\"ld t1, %%0\\n\\t\\t\"\n");
+#else
 	fprintf(file,"\t\t\"movq %%0, %%%%r8\\n\\t\\t\"\n");
+#endif
 	if(strcmp(op,"div") == 0){
+#if defined(RV64)
+		fprintf(file,"\t\t\"ld a0, %%1\\n\\t\\t\"\n");
+		if(strcmp(precision, "dp") == 0){
+			fprintf(file,"\t\t\"%s %%%%%s0, 0(a0)\\n\\t\\t\"\n", DP_MEM_LD, REGISTER);	
+		}else{
+			fprintf(file,"\t\t\"%s %%%%%s0, 0(a0)\\n\\t\\t\"\n", SP_MEM_LD, REGISTER);	
+		}
+#else
 		fprintf(file,"\t\t\"movq %%1, %%%%rax\\n\\t\\t\"\n");
 		if(strcmp(precision, "dp") == 0){
 			fprintf(file,"\t\t\"%s (%%%%rax), %%%%%s0\\n\\t\\t\"\n", DP_MEM, REGISTER);	
 		}else{
 			fprintf(file,"\t\t\"%s (%%%%rax), %%%%%s0\\n\\t\\t\"\n", SP_MEM, REGISTER);	
 		}
+#endif
 	}
 	fprintf(file,"\t\t\"Loop2_%%=:\\n\\t\\t\"\n");
 	if(iter > 1){
+#if defined(RV64)
+		fprintf(file,"\t\t\"li t2, %lld\\n\\t\\t\"\n",iter);
+		fprintf(file,"\t\t\"Loop1_%%=:\\n\\t\\t\"\n");
+#else
 		fprintf(file,"\t\t\"movl $%lld, %%%%edi\\n\\t\\t\"\n",iter);
 		fprintf(file,"\t\t\"Loop1_%%=:\\n\\t\\t\"\n");
+#endif
 		for(i = 0; i < BASE_LOOP_SIZE; i++){
 			if(i % NUM_REGISTER == 0){
 				j = 0;
@@ -73,7 +91,7 @@ void write_asm_fp (int long long fp, char * op, int flops, char * assembly_op_fl
 					}
 					fprintf(file,"\t\t\"%s %%%%%s%d, %%%%%s%d, %%%%%s%d\\n\\t\\t\"\n", assembly_op_flops_2, REGISTER, j, REGISTER, j, REGISTER, j);
 				}else{	
-					fprintf(file,"\t\t\"%s %%%%%s%d, %%%%%s%d, %%%%%s%d\\n\\t\\t\"\n", assembly_op_flops_1, REGISTER, j, REGISTER, j, REGISTER, j);
+					fprintf(file,"\t\t\"%s %s%d, %s%d, %s%d, %s%d\\n\\t\\t\"\n", assembly_op_flops_1, REGISTER, j, REGISTER, j, REGISTER, j, REGISTER, j);
 				}	
 			#elif defined(AVX) || defined(AVX256) || defined(AVX512) || defined(SSE)
 				if(strcmp(op,"div") == 0){
@@ -93,7 +111,7 @@ void write_asm_fp (int long long fp, char * op, int flops, char * assembly_op_fl
 				}	
 			#else
 				if(strcmp(op,"div") == 0){
-					fprintf(file,"\t\t\"%s %%%%%s0, %%%%%s%d;\"\n", assembly_op_flops_1, REGISTER, REGISTER, j);
+					fprintf(file,"\t\t\"%s %%%%%s%d, %%%%%s%d, %%%%%s%d\\n\\t\\t\"\n", assembly_op_flops_1, REGISTER, j, REGISTER, j, REGISTER, j);
 				}else if(strcmp(op,"mad") == 0){
 					if(j  >= NUM_REGISTER){
 						j = 0;
@@ -104,17 +122,22 @@ void write_asm_fp (int long long fp, char * op, int flops, char * assembly_op_fl
 						j = 0;
 					}
 					fprintf(file,"\t\t\"%s %%%%%st%d, %%%%%s%d;\"\n", assembly_op_flops_2, REGISTER, j, REGISTER, j);
-				}else if(strcmp(op,"FMA") == 0){
+				}else if(strcmp(op,"fma") == 0){
 					fprintf(file,"\t\t\"%s %%%%%s%d, %%%%%s%d, %%%%%s%d\\n\\t\\t\"\n", assembly_op_flops_1, REGISTER, j, REGISTER, j, REGISTER, j);
 				}else{
-					fprintf(file,"\t\t\"%s %%%%%s%d, %%%%%s%d;\"\n", assembly_op_flops_1, REGISTER, j, REGISTER, j);
+					fprintf(file,"\t\t\"%s %%%%%s%d, %%%%%s%d, %%%%%s%d\\n\\t\\t\"\n", assembly_op_flops_1, REGISTER, j, REGISTER, j, REGISTER, j);
 				}	
 			#endif
 			j++;
 			fp -= iter;
-		}	
+		}
+#if defined(RV64)
+		fprintf(file,"\t\t\"addi t2, t2, -1\\n\\t\\t\"\n");
+		fprintf(file,"\t\t\"bnez t2, Loop1_%%=\\n\\t\\t\"\n");
+#else
 		fprintf(file,"\t\t\"subl $1, %%%%edi\\n\\t\\t\"\n");
 		fprintf(file,"\t\t\"jnz Loop1_%%=\\n\\t\\t\"\n");
+#endif
 	}
 	
 	for(i = 0; i < fp; i++){
@@ -134,8 +157,8 @@ void write_asm_fp (int long long fp, char * op, int flops, char * assembly_op_fl
 					j = 0;
 				}
 				fprintf(file,"\t\t\"%s %%%%%s%d, %%%%%s%d, %%%%%s%d\\n\\t\\t\"\n", assembly_op_flops_2, REGISTER, j, REGISTER, j, REGISTER, j);
-			}else{	
-				fprintf(file,"\t\t\"%s %%%%%s%d, %%%%%s%d, %%%%%s%d\\n\\t\\t\"\n", assembly_op_flops_1, REGISTER, j, REGISTER, j, REGISTER, j);
+			}else{
+				fprintf(file,"\t\t\"%s %s%d, %s%d, %s%d, %s%d\\n\\t\\t\"\n", assembly_op_flops_1, REGISTER, j, REGISTER, j, REGISTER, j, REGISTER, j);
 			}	
 		#elif defined (AVX512) || defined (AVX256) || defined (AVX)
 			if(strcmp(op,"div") == 0){
@@ -174,17 +197,28 @@ void write_asm_fp (int long long fp, char * op, int flops, char * assembly_op_fl
 		#endif
 		j++;
 	}
-	
+#if defined(RV64)
+	fprintf(file,"\t\t\"addi t1, t1, -1\\n\\t\\t\"\n");
+	fprintf(file,"\t\t\"bnez t1, Loop2_%%=\\n\\t\\t\"\n");
+#else
 	fprintf(file,"\t\t\"sub $1, %%%%r8\\n\\t\\t\"\n");
 	fprintf(file,"\t\t\"jnz Loop2_%%=\\n\\t\\t\"\n");
-	
+#endif
+#if defined(RV64)
+	//End Test Function
+	if(strcmp(op,"div") == 0){
+		fprintf(file,"\t\t:\n\t\t:\"r\"(num_rep_max),\"r\" (test_var)\n\t\t:\"%%t1\",\"%%t2\","COBLERED"\n\t);\n");
+	}else{
+		fprintf(file,"\t\t:\n\t\t:\"r\"(num_rep_max)\n\t\t:\"t1\",\"t2\","COBLERED"\n\t);\n");
+	}
+#else
 	//End Test Function
 	if(strcmp(op,"div") == 0){
 		fprintf(file,"\t\t:\n\t\t:\"r\"(num_rep_max),\"r\" (test_var)\n\t\t:\"%%rax\",\"%%rdi\","COBLERED"\n\t);\n");
 	}else{
 		fprintf(file,"\t\t:\n\t\t:\"r\"(num_rep_max)\n\t\t:\"%%rax\",\"%%rdi\","COBLERED"\n\t);\n");
 	}
-	
+#endif	
 	fprintf(file,"}\n\n");
 	
 	//fclose(file);
@@ -197,7 +231,7 @@ void write_asm_fp (int long long fp, char * op, int flops, char * assembly_op_fl
 //																					WRITE MEM TEST
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void write_asm_mem (int long long num_rep, int align, int ops, int num_ld, int num_st, char * assembly_op, char * precision){
+void write_asm_mem (int long long num_rep, int align, int ops, int num_ld, int num_st, char * assembly_op_mem_1, char * assembly_op_mem_2, char * precision){
 	
 	int offset = 0;
 	int aux = num_rep;
@@ -238,13 +272,13 @@ void write_asm_mem (int long long num_rep, int align, int ops, int num_ld, int n
 		fprintf(file,"\t\t\"beqz t1, outer_loop_exit_%%=\\n\\t\\t\"\n"); //Load the immediate loop size to t0
 		fprintf(file,"\t\t\"inner_loop_%%=:\\n\\t\\t\"\n"); //inner loop
 	}
-		for(i = 0; i < num_aux-1; i++){
+		for(i = 0; i < num_aux; i++){
 			for(k = 0;k < num_ld;k++){
 				if(j  >= NUM_REGISTER){
 					j = 0;
 				}
 				//fprintf(file,"\t\t\"ld a0, %d(t0)\\n\\t\\t\"\n", offset); // move from t0
-				fprintf(file,"\t\t\"fld %s%d, %d(a0)\\n\\t\\t\"\n", REGISTER, j, offset); // move from t0
+				fprintf(file,"\t\t\"%s %s%d, %d(a0)\\n\\t\\t\"\n", assembly_op_mem_1, REGISTER, j, offset); // move from t0
 				j++;
 				offset += align;
 			}
@@ -253,7 +287,7 @@ void write_asm_mem (int long long num_rep, int align, int ops, int num_ld, int n
 					j = 0;
 				}
 				//fprintf(file,"\t\t\"ld t0, %d(t0)\\n\\t\\t\"\n", offset); // move from t0
-				fprintf(file,"\t\t\"fsd %s%d, %d(a0)\\n\\t\\t\"\n", REGISTER, j, offset); // move from t0
+				fprintf(file,"\t\t\"%s %s%d, %d(a0)\\n\\t\\t\"\n", assembly_op_mem_2, REGISTER, j, offset); // move from t0
 				j++;
 				offset += align;
 			}
@@ -285,7 +319,7 @@ void write_asm_mem (int long long num_rep, int align, int ops, int num_ld, int n
 						j = 0;
 					}
 					//TODO
-					//fprintf(file,"\t\t\"%s %s%d, %d(a0)\\n\\t\\t\"\n", assembly_op, offset, REGISTER,j); // move from a0
+					//fprintf(file,"\t\t\"%s %s%d, %d(a0)\\n\\t\\t\"\n", assembly_op_mem_1, offset, REGISTER,j); // move from a0
 					j++;
 					offset += align;
 				}
@@ -294,7 +328,7 @@ void write_asm_mem (int long long num_rep, int align, int ops, int num_ld, int n
 						j = 0;
 					}
 					//TODO
-					//fprintf(file,"\t\t\"%s %d(a0), %s%d\\n\\t\\t\"\n", assembly_op, REGISTER, j, offset); // move to a0
+					//fprintf(file,"\t\t\"%s %d(a0), %s%d\\n\\t\\t\"\n", assembly_op_mem_2, REGISTER, j, offset); // move to a0
 					j++;
 					offset += align;
 				}
@@ -315,7 +349,7 @@ void write_asm_mem (int long long num_rep, int align, int ops, int num_ld, int n
 				j = 0;
 			}
 			//TODO
-			//fprintf(file,"\t\t\"%s %s%d, %d(a0)\\n\\t\\t\"\n", assembly_op, offset, REGISTER,j);
+			//fprintf(file,"\t\t\"%s %s%d, %d(a0)\\n\\t\\t\"\n", assembly_op_mem_1, offset, REGISTER,j);
 			j++;
 			offset += align;
 			
@@ -325,7 +359,7 @@ void write_asm_mem (int long long num_rep, int align, int ops, int num_ld, int n
 				j = 0;
 			}
 			//TODO
-			//fprintf(file,"\t\t\"%s %d(a0), %s%d\\n\\t\\t\"\n", assembly_op, REGISTER, j, offset);
+			//fprintf(file,"\t\t\"%s %d(a0), %s%d\\n\\t\\t\"\n", assembly_op_mem_1, REGISTER, j, offset);
 			j++;
 			offset += align;
 		}
@@ -352,7 +386,7 @@ void write_asm_mem (int long long num_rep, int align, int ops, int num_ld, int n
 					if(j  >= NUM_REGISTER){
 						j = 0;
 					}
-					fprintf(file,"\t\t\"%s %d(%%%%rax), %%%%%s%d\\n\\t\\t\"\n", assembly_op, offset, REGISTER,j);
+					fprintf(file,"\t\t\"%s %d(%%%%rax), %%%%%s%d\\n\\t\\t\"\n", assembly_op_mem_1, offset, REGISTER,j);
 					j++;
 					offset += align;
 				}
@@ -360,7 +394,7 @@ void write_asm_mem (int long long num_rep, int align, int ops, int num_ld, int n
 					if(j  >= NUM_REGISTER){
 						j = 0;
 					}
-					fprintf(file,"\t\t\"%s %%%%%s%d, %d(%%%%rax)\\n\\t\\t\"\n", assembly_op, REGISTER, j, offset);
+					fprintf(file,"\t\t\"%s %%%%%s%d, %d(%%%%rax)\\n\\t\\t\"\n", assembly_op_mem_1, REGISTER, j, offset);
 					j++;
 					offset += align;
 				}
@@ -380,7 +414,7 @@ void write_asm_mem (int long long num_rep, int align, int ops, int num_ld, int n
 			if(j  >= NUM_REGISTER){
 				j = 0;
 			}
-			fprintf(file,"\t\t\"%s %d(%%%%rax), %%%%%s%d\\n\\t\\t\"\n", assembly_op, offset, REGISTER,j);
+			fprintf(file,"\t\t\"%s %d(%%%%rax), %%%%%s%d\\n\\t\\t\"\n", assembly_op_mem_1, offset, REGISTER,j);
 			j++;
 			offset += align;
 			
@@ -389,7 +423,7 @@ void write_asm_mem (int long long num_rep, int align, int ops, int num_ld, int n
 			if(j  >= NUM_REGISTER){
 				j = 0;
 			}
-			fprintf(file,"\t\t\"%s %%%%%s%d, %d(%%%%rax)\\n\\t\\t\"\n", assembly_op, REGISTER, j, offset);
+			fprintf(file,"\t\t\"%s %%%%%s%d, %d(%%%%rax)\\n\\t\\t\"\n", assembly_op_mem_1, REGISTER, j, offset);
 			j++;
 			offset += align;
 		}

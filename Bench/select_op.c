@@ -50,19 +50,45 @@ void select_ISA_flops(int * flop, char ** assembly_op, char * operation, char * 
 	}
 }
 
-void select_ISA_mem(int * align, int * ops, char ** assembly_op, char * precision){
+void select_ISA_mem(int * align, int * ops, char ** assembly_op, char * operation, char * precision){
 	size_t len;
 	if(strcmp(precision, "dp") == 0){
 		*ops = DP_OPS;
 		*align = DP_ALIGN;
+#if defined(RV64)
+        if(strcmp(operation, "load") == 0){
+            len = strlen(DP_MEM_LD);
+            *assembly_op = (char *) malloc(len+1);
+            strcpy(*assembly_op, DP_MEM_LD);
+        }
+        if(strcmp(operation, "store") == 0){
+            len = strlen(DP_MEM_ST);
+            *assembly_op = (char *) malloc(len+1);
+            strcpy(*assembly_op, DP_MEM_ST);
+        }
+#else
 		len = strlen(DP_MEM);
 		*assembly_op = (char *) malloc(len+1);
 		strcpy(*assembly_op,DP_MEM);
+#endif
 	}else{
 		*ops = SP_OPS;
 		*align = SP_ALIGN;
-		len = strlen(SP_MEM);
+#if defined(RV64)
+        if(strcmp(operation, "load") == 0){
+            len = strlen(SP_MEM_LD);
+            *assembly_op = (char *) malloc(len+1);
+            strcpy(*assembly_op, SP_MEM_LD);
+        }
+        if(strcmp(operation, "store") == 0){
+            len = strlen(SP_MEM_ST);
+            *assembly_op = (char *) malloc(len+1);
+            strcpy(*assembly_op, SP_MEM_ST);
+        }
+#else
+		len = strlen(DP_MEM);
 		*assembly_op = (char *) malloc(len+1);
-		strcpy(*assembly_op, SP_MEM);	
+		strcpy(*assembly_op,SP_MEM);
+#endif
 	}                                
 }

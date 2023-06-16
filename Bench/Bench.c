@@ -19,8 +19,10 @@ int main (int argc, char*argv[]){
 			strcpy(test, argv[i+1]);
 		}else if(strcmp(argv[i],"-num_LD") == 0){			//Number of LD INST per iteration
 			num_ld = atoi(argv[i+1]);
+			printf("Number of loads: %d\n",num_ld);
 		}else if(strcmp(argv[i],"-num_ST")== 0){			//Number of ST INST per iteration
 			num_st = atoi(argv[i+1]);
+			printf("Number of stores: %d\n",num_st);
 		}else if(strcmp(argv[i], "-op") == 0){        		//Operation type
 			size_t len = strlen(argv[i+1]);
 			operation = (char*) malloc(len+1);
@@ -33,6 +35,7 @@ int main (int argc, char*argv[]){
 			strcpy(precision, argv[i+1]);
 		}else if(strcmp(argv[i], "-num_rep")==0){
 			num_rep = atol(argv[i+1]);
+			printf("Number of reps: %lld\n",num_rep);
 		}else if(strcmp(argv[i], "-h") ==0){				//Select to see help
 			printf("Usage for FLOPS: ./Bench -test FLOPS [options]\nOptions:\n\t-op - Select the operation (add | mul | div | fma | mad)\n\t-fp:Number of FP INST\n\t-mode:SCALAR or SIMD INST (scalar | simd)\n\t-precision:Select FP precision (dp | fp)\n");
 			printf("Usage for MEM: ./Bench -test MEM [options]\nOptions:\n\t-num_LD:Number of LD INST per loop iteration (>= 1 if num_ST = 0) \n\t-num_ST:Number of ST INST per loop iteration (>= 1 if num_LD = 0)\n\t-num_rep: Number of repetions of the LD/ST INST ( >=1 and useful to maintain a constant LD/ST ratio )\n\t-mode:SCALAR or SIMD INST (scalar | simd)\n\t-precision:Select FP precision (dp | fp)\n");
