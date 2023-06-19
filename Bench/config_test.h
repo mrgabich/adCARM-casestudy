@@ -15,8 +15,8 @@
 	#define INST_LOOP_SIZE 128
 #if defined (RV64)
 	#define ISA "rv64"
-	#define DP_ALIGN 8
-	#define SP_ALIGN 4
+	#define DP_ALIGN 64
+	#define SP_ALIGN 64
 #else //if defined (RV32)
 	#define ISA "rv32"
 	#define DP_ALIGN 8
@@ -26,7 +26,7 @@
 	#define NUM_REGISTER 32
 	#define REGISTER "f"
 	//#define REGISTER "x"
-	//#define COBLERED "\"%%x0\",\"%%x1\",\"%%x2\",\"%%x3\",\"%%x4\",\"%%x5\",\"%%x6\",\"%%x7\",\"%%x8\",\"%%x9\",\"%%x10\",\"%%x11\",\"%%x12\",\"%%x13\",\"%%x14\",\"%%x15\",\"memory\""
+	//#define COBLERED "\"x0\",\"x1\",\"x2\",\"x3\",\"x4\",\"x5\",\"x6\",\"x7\",\"x8\",\"x9\",\"x10\",\"x11\",\"x12\",\"x13\",\"x14\",\"x15\",\"memory\""
 	#define COBLERED "\"f0\",\"f1\",\"f2\",\"f3\",\"f4\",\"f5\",\"f6\",\"f7\",\"f8\",\"f9\",\"f10\",\"f11\",\"f12\",\"f13\",\"f14\",\"f15\",\"memory\""
 	#define DP_OPS 1
 	#define DP_DIV "fdiv.d"
@@ -41,12 +41,12 @@
 	#define SP_ADD "fadd.s"
 	#define SP_MUL "fmul.s"
 	#define SP_FMA "fmadd.s"
-	#define SP_MEM_LD "flw"
-	#define SP_MEM_ST "fsw"
+	#define SP_MEM_LD "flw.d"
+	#define SP_MEM_ST "fsw.d"
 #else //if defined (I)
 	#define NUM_REGISTER 32
 	#define REGISTER "x"
-	#define COBLERED "\"%%x0\",\"%%x1\",\"%%x2\",\"%%x3\",\"%%x4\",\"%%x5\",\"%%x6\",\"%%x7\",\"%%x8\",\"%%x9\",\"%%x10\",\"%%x11\",\"%%x12\",\"%%x13\",\"%%x14\",\"%%x15\",\"memory\""
+	#define COBLERED "\"x0\",\"x1\",\"x2\",\"x3\",\"x4\",\"x5\",\"x6\",\"x7\",\"x8\",\"x9\",\"x10\",\"x11\",\"x12\",\"x13\",\"x14\",\"x15\",\"memory\""
 	#define SP_OPS 1
 	#define SP_DIV "div"
 	#define SP_ADD "add"
