@@ -1,6 +1,6 @@
 # Add to ~/.bashrc, replace paths if desired
 export RISCV=~/development/inesc/riscv
-export PATH=$RISCV/bin:$PATH
+#export PATH=$RISCV/bin:$PATH
 export G5=/soft64/gem5
 export SRC=$RISCV/src
 export OUT=$RISCV/out

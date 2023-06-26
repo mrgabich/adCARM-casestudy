@@ -89,32 +89,26 @@ git clone https://github.com/torvalds/linux.git $SRC/linux
 cd $SRC/linux
 git checkout v5.10
 cp $SRC/ucanlinux/kernel.config .config
-makefile_path="./arch/riscv/Makefile"  # Replace with the actual path to your Makefile
-
+#The following commands fix the previous make issue when using gcc v12.
+#makefile_path="./arch/riscv/Makefile"  # Replace with the actual path to your Makefile
 # Store the content to be inserted
-content="
+#content="
 # Newer binutils versions default to ISA spec version 20191213 which moves some
 # instructions from the I extension to the Zicsr and Zifencei extensions.
-toolchain-need-zicsr-zifencei := \$(call cc-option-yn, -march=\$(riscv-march-y)_zicsr_zifencei)
-riscv-march-\$(toolchain-need-zicsr-zifencei) := \$(riscv-march-y)_zicsr_zifencei
-"
-
+#toolchain-need-zicsr-zifencei := \$(call cc-option-yn, -march=\$(riscv-march-y)_zicsr_zifencei)
+#riscv-march-\$(toolchain-need-zicsr-zifencei) := \$(riscv-march-y)_zicsr_zifencei
+#"
 # Temporary file path
-temp_file=$(mktemp)
-
+#temp_file=$(mktemp)
 # Read the Makefile until line 43 and write to the temporary file
-head -n 43 "$makefile_path" > "$temp_file"
-
+#head -n 43 "$makefile_path" > "$temp_file"
 # Append the content to the temporary file
-echo "$content" >> "$temp_file"
-
+#echo "$content" >> "$temp_file"
 # Append the lines from line 44 onwards to the temporary file
-tail -n +44 "$makefile_path" >> "$temp_file"
-
+#tail -n +44 "$makefile_path" >> "$temp_file"
 # Replace the original Makefile with the modified one
-mv "$temp_file" "$makefile_path"
-
-echo "String successfully inserted in the Makefile."
+#mv "$temp_file" "$makefile_path"
+#echo "String successfully inserted in the Makefile."
 make ARCH=riscv CROSS_COMPILE=riscv64-unknown-linux-gnu- olddefconfig
 make ARCH=riscv CROSS_COMPILE=riscv64-unknown-linux-gnu- all -j$(nproc)
 cp vmlinux $OUT
@@ -126,8 +120,9 @@ sudo apt-get install -y device-tree-compiler
 git clone https://github.com/riscv/riscv-pk.git $SRC/pk
 mkdir -p $SRC/pk/build 
 cd $SRC/pk/build
-#../configure --host=riscv64-unknown-linux-gnu --with-payload=$OUT/vmlinux --prefix=$RISCV
-../configure --host=riscv64-unknown-linux-gnu --with-arch=rv64gc_zifencei --with-abi=lp64d --with-payload=$OUT/vmlinux --prefix=$RISCV\n
+../configure --host=riscv64-unknown-linux-gnu --with-abi=lp64d --with-payload=$OUT/vmlinux --prefix=$RISCV
+#Also to fix previous issue.
+#../configure --host=riscv64-unknown-linux-gnu --with-arch=rv64gc_zifencei --with-abi=lp64d --with-payload=$OUT/vmlinux --prefix=$RISCV\n
 CFLAGS="-g" make -j$(nproc)
 make install
 cp bbl $OUT
