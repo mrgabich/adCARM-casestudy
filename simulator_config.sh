@@ -37,7 +37,8 @@ mkdir -p $RISCV/src
 sudo apt-get install -y autoconf automake autotools-dev curl python3 libmpc-dev libmpfr-dev libgmp-dev gawk build-essential bison flex texinfo gperf libtool patchutils bc zlib1g-dev libexpat-dev
 git clone https://github.com/riscv/riscv-gnu-toolchain $SRC/toolchain
 cd $SRC/toolchain
-./configure --prefix=$RISCV --enable-multilib
+git checkout 88b004d4c2a7d4e4f08b17ee32d2
+./configure --prefix=/opt/riscv --enable-multilib
 make linux -j$(nproc)
 # You will need this to compile things like PARSEC and riscv-tests
 make newlib -j$(nproc)
@@ -70,6 +71,9 @@ git clone https://gem5.googlesource.com/public/gem5 $G5
 
 cd $G5 && scons build/RISCV/gem5.opt -j$(nproc)
 
+cd $G5/util/m5
+scons riscv.CROSS_COMPILE=riscv64-unknown-linux-gnu- build/riscv/out/m5
+
 #######################################################################
 #4. Linux System
 #4.1 Disk Image (UCanLinux)
@@ -83,12 +87,37 @@ cp $SRC/ucanlinux/riscv_disk $OUT
 
 git clone https://github.com/torvalds/linux.git $SRC/linux
 cd $SRC/linux
-git checkout v5.19
+git checkout v5.10
 cp $SRC/ucanlinux/kernel.config .config
+makefile_path="./arch/riscv/Makefile"  # Replace with the actual path to your Makefile
+
+# Store the content to be inserted
+content="
+# Newer binutils versions default to ISA spec version 20191213 which moves some
+# instructions from the I extension to the Zicsr and Zifencei extensions.
+toolchain-need-zicsr-zifencei := \$(call cc-option-yn, -march=\$(riscv-march-y)_zicsr_zifencei)
+riscv-march-\$(toolchain-need-zicsr-zifencei) := \$(riscv-march-y)_zicsr_zifencei
+"
+
+# Temporary file path
+temp_file=$(mktemp)
+
+# Read the Makefile until line 43 and write to the temporary file
+head -n 43 "$makefile_path" > "$temp_file"
+
+# Append the content to the temporary file
+echo "$content" >> "$temp_file"
+
+# Append the lines from line 44 onwards to the temporary file
+tail -n +44 "$makefile_path" >> "$temp_file"
+
+# Replace the original Makefile with the modified one
+mv "$temp_file" "$makefile_path"
+
+echo "String successfully inserted in the Makefile."
 make ARCH=riscv CROSS_COMPILE=riscv64-unknown-linux-gnu- olddefconfig
 make ARCH=riscv CROSS_COMPILE=riscv64-unknown-linux-gnu- all -j$(nproc)
 cp vmlinux $OUT
-
 
 #######################################################################
 #4.3 Berkeley Bootloader (bbl)
