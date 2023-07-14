@@ -15,8 +15,8 @@
 	#define INST_LOOP_SIZE 128
 #if defined (RV64)
 	#define ISA "rv64"
-	#define DP_ALIGN 64
-	#define SP_ALIGN 64
+	#define DP_ALIGN 8
+	#define SP_ALIGN 4
 #else //if defined (RV32)
 	#define ISA "rv32"
 	#define DP_ALIGN 8

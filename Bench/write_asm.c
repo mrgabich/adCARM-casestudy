@@ -64,7 +64,11 @@ void write_asm_fp (int long long fp, char * op, int flops, char * assembly_op_fl
 		}
 #endif
 	}
+#if defined(RV64)
 	fprintf(file,"\t\t\"outer_loop_%%=:\\n\\t\\t\"\n");
+#else
+	fprintf(file,"\t\t\"Loop2_%%=:\\n\\t\\t\"\n");
+#endif
 	if(iter > 1){
 #if defined(RV64)
 		fprintf(file,"\t\t\"li t1, %lld\\n\\t\\t\"\n",iter);
@@ -257,7 +261,7 @@ void write_asm_mem (int long long num_rep, int align, int ops, int num_ld, int n
 	fprintf(file_header,"#define ALIGN %d\n\n", align);
 	fprintf(file_header,"#define FP_INST 1\n\n");
 	
-	iter = mem_math (num_rep, num_ld, num_st,&num_aux); //Calculate number of iterations
+	iter = mem_math (num_rep, num_ld, num_st, &num_aux); //Calculate number of iterations
 	
 	//Create Test Function
 	fprintf(file,"static inline __attribute__((always_inline)) void test_function(PRECISION * test_var, int long long num_reps_t){\n");
