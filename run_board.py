@@ -6,7 +6,7 @@ import datetime
 
 #Mapping between ISA and memory transfer size
 mem_inst_size = {"avx512": {"sp": 64, "dp": 64}, "avx256": {"sp": 32, "dp": 32}, "avx": {"sp": 32, "dp": 32}, "sse": {"sp": 16, "dp": 16}, "scalar": {"sp": 8, "dp": 8}, "rv64": {"sp": 8, "dp": 8}}
-ops_fp = {"avx512": {"sp": 16, "dp": 8}, "avx256": {"sp": 8, "dp": 4}, "avx": {"sp": 8, "dp": 4}, "sse": {"sp": 4, "dp": 2}, "scalar": {"sp": 1, "dp": 1}, "rv64": {"sp": 1, "dp": 1}}
+ops_fp = {"avx512": {"sp": 16, "dp": 8}, "avx256": {"sp": 8, "dp": 4}, "avx": {"sp": 8, "dp": 4}, "sse": {"sp": 4, "dp": 2}, "scalar": {"sp": 1, "dp": 1}, "rv64": {"sp": 4, "dp": 2}}
 
 #Read system configuration file
 def read_config(config_file):
