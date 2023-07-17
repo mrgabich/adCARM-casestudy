@@ -269,8 +269,8 @@ void write_asm_mem (int long long num_rep, int align, int ops, int num_ld, int n
 
 #if defined(RV64)
 	fprintf(file,"\t\t\"ld t2, %%0\\n\\t\\t\"\t\t\n"); // Move num_reps_t to t2
-	fprintf(file,"\t\t\"ld a0, %%1\\n\\t\\t\"\n"); // Load the address of test_var into t0
 	fprintf(file,"\t\t\"outer_loop_%%=:\\n\\t\\t\"\n"); //outer loop
+    fprintf(file,"\t\t\"ld a0, %%1\\n\\t\\t\"\n"); // Load the address of test_var into t0
 	if(iter > 1){
 		fprintf(file,"\t\t\"li t1, %lld\\n\\t\\t\"\n",iter); //Load the immediate loop size to t0
 		//fprintf(file,"\t\t\"beqz t1, outer_loop_exit_%%=\\n\\t\\t\"\n"); //Load the immediate loop size to t0
