@@ -25,8 +25,8 @@ else ifeq ($(isa),scalar)
 	CFLAGS = -g -Wall -Wextra -Ofast -march=native
 else ifeq ($(isa),rv64)
 	FLAGS += -DRV -DRV64 -DFP
-	COMPILER = riscv64-oe-linux-gcc
-	OBJDUMP = riscv64-oe-linux-objdump
+	COMPILER = gcc
+	OBJDUMP = objdump
 	CFLAGS = -g -Wall -Wextra -Ofast -mabi=lp64d -march=rv64gc
 else
 	FLAGS += -DARMV7A
