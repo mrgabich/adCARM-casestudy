@@ -5,6 +5,11 @@
 #include <linux/unistd.h>
 #include <unistd.h> 
 #include <sys/resource.h>
+#include <time.h>
+#include <sys/syscall.h>
+#include <sys/time.h>
+#include <sys/resource.h>
+#include <sys/times.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -71,51 +76,31 @@ int long long median(int n, int long long x[]){
 #if defined(RV64)
 static inline void serialize() {
     asm volatile (
-        "li t0, 0 \n"   // Load zero into temporary register t0
-        "mv a0, t0 \n"  // Move the value in t0 to register a0
-        "li a1, 0 \n"   // Load zero into register a1
-        "li a2, 0 \n"   // Load zero into register a2
-        "li a3, 0 \n"   // Load zero into register a3
-        "li a4, 0 \n"   // Load zero into register a4
-        "li a5, 0 \n"   // Load zero into register a5
-        "li a6, 0 \n"   // Load zero into register a6
-        "li a7, 0 \n"   // Load zero into register a7
-        "ecall \n"      // Execute a system call to ensure serialization
+        "fence\n"  // Insert a fence instruction for memory ordering
+        "fence.i\n" // Insert a fence.i instruction for instruction ordering
     );
 }
 
 static inline long long read_tsc_start() {
-    uint64_t d, a;
-    asm volatile (
-        "li a7, 10 \n"         // Set a7 (function code) to 10 for RDCYCLE instruction
-        "ecall \n"             // Execute a system call to read the cycle counter
-        "mv %0, a0 \n"         // Move the value in register a0 to variable d
-        "li a7, 11 \n"         // Set a7 (function code) to 11 for RDTSC instruction
-        "ecall \n"             // Execute a system call to read the time-stamp counter
-        "mv %1, a0 \n"         // Move the value in register a0 to variable a
-        : "=r" (d), "=r" (a)   // Output operands
-        :
-        : "a0", "a7"           // Clobbered registers
-    );
+long long retval;
 
-    return ((long long)d << 32 | a);
+   struct timespec foo;
+   syscall( __NR_clock_gettime, CLOCK_REALTIME, &foo );
+   retval = ( long long ) foo.tv_sec * ( long long ) 1000000000;
+   retval += ( long long ) ( foo.tv_nsec );
+
+   return retval;
 }
 
 static inline long long read_tsc_end() {
-    uint64_t d, a;
-    asm volatile (
-        "li a7, 11 \n"         // Set a7 (function code) to 11 for RDTSC instruction
-        "ecall \n"             // Execute a system call to read the time-stamp counter
-        "mv %0, a0 \n"         // Move the value in register a0 to variable d
-        "li a7, 10 \n"         // Set a7 (function code) to 10 for RDCYCLE instruction
-        "ecall \n"             // Execute a system call to read the cycle counter
-        "mv %1, a0 \n"         // Move the value in register a0 to variable a
-        : "=r" (d), "=r" (a)   // Output operands
-        :
-        : "a0", "a7"           // Clobbered registers
-    );
+   long long retval;
 
-    return ((long long)d << 32 | a);
+   struct timespec foo;
+   syscall( __NR_clock_gettime, CLOCK_REALTIME, &foo );
+   retval = ( long long ) foo.tv_sec * ( long long ) 1000000000;
+   retval += ( long long ) ( foo.tv_nsec );
+
+   return retval;
 }
 
 #elif defined(ARMV7A)
@@ -222,12 +207,14 @@ void * benchmark_test(void *t_args){
 
 	int i;
 	int long long num_reps_t;
+    volatile float freq;
+    volatile long tid;
 	int long long expected_time = EXPECTED_TIME;
 
     struct pthread_args *args = t_args;
 
-	long tid = (long)args->tid;
-    float freq = args->freq;
+	tid = (long) args->tid;
+    freq = args->freq;
 
 	volatile long long tsc_s;
 	volatile long long tsc_e;
