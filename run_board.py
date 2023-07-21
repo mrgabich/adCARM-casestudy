@@ -89,7 +89,7 @@ def run_roofline(name, freq, l1_size, l2_size, l3_size, inst, isa, precision, nu
     data['L2'] = float(threads*num_reps*(num_ld+num_st)*mem_inst_size[isa][precision]*float(freq))*float(out[1])/float(out[0])
 
     #Run L3 Test 
-    if (l3_size > 0):
+    if (int(l3_size) > 0):
         num_reps = int(1024*(int(l2_size)*threads + (int(l3_size) - int(l2_size)*threads)/2)/(threads*mem_inst_size[isa][precision]*(num_ld+num_st)))
         
         try:
@@ -156,7 +156,7 @@ def run_roofline(name, freq, l1_size, l2_size, l3_size, inst, isa, precision, nu
     ct = datetime.datetime.now()
 
     #Plot Roofline
-    plot_roofline(name, data, ct)
+    # plot_roofline(name, data, ct)
 
     f = open('Results/' + name + '_data_roofline_' + str(ct.time()) + '_' + str(ct.date()) + '.out', 'w')
     for d, v in data.items():
