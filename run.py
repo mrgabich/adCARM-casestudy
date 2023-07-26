@@ -35,6 +35,29 @@ def read_config(config_file):
 
     return name, freq, l1_size, l2_size, l3_size
 
+def read_roofline_data(roofline_file):
+    data = {}
+    f = open(roofline_file, "r")
+
+    for line in f:
+        l = line.split(': ')
+        if(l[0] == 'L1'):
+            data['L1'] = l[1].rstrip()
+
+        if(l[0] == 'L2'):
+            data['L2'] = l[1].rstrip()
+        
+        if(l[0] == 'L3'):
+            data['L3'] = l[1].rstrip()
+        
+        if(l[0] == 'DRAM'):
+            data['DRAM'] = l[1].rstrip()
+        
+        if(l[0] == 'FP'):
+            data['FP'] = l[1].rstrip()
+    
+    ct = datetime.datetime.now()
+    plot_roofline(name, data, ct)
 
 def round_power_of_2(number):
     if number > 1:
@@ -127,7 +150,7 @@ def run_roofline(name, freq, l1_size, l2_size, l3_size, inst, isa, precision, nu
     data['L2'] = float(threads*num_reps*(num_ld+num_st)*mem_inst_size[isa][precision]*float(freq))*float(out[1])/float(out[0])
 
     #Run L3 Test 
-    if (l3_size > 0):
+    if (int(l3_size) > 0):
         num_reps = int(1024*(int(l2_size)*threads + (int(l3_size) - int(l2_size)*threads)/2)/(threads*mem_inst_size[isa][precision]*(num_ld+num_st)))
         
         try:
@@ -219,6 +242,7 @@ def main():
     parser.add_argument('-p', '--precision', default='dp', nargs='?', choices=['dp', 'sp'], help='Data Precision (Default: dp)')
     parser.add_argument('-ldst', '--ld_st_ratio',  default=2, nargs='?', type = int, help='Load/Store Ratio (Default: 2)')
     parser.add_argument('--only_ld',  dest='only_ld', action='store_const', const=1, default=0, help='Run only loads in mem test (ld_st_ratio is ignored)')
+    parser.add_argument('--only_plt', default='none', help='Path for the output file')
     #parser.add_argument('--curve',  dest='curve', action='store_const', const=1, default=0, help='To obtain full MEM and FP Curves')
     parser.add_argument('config', help='Path for the system configuration file')
     parser.add_argument('-t', '--threads', default=1, nargs='?', type = int, help='Number of threads for the micro-benchmarking (Default: 1)')
@@ -239,7 +263,9 @@ def main():
         num_ld = args.ld_st_ratio
         num_st = 1
 
-    if args.test == 'fp':
+    if args.only_plt != 'none':
+        read_roofline_data(args.result_file)
+    elif args.test == 'fp':
         raise ValueError('Not implemented yet!')
         """  if(args.curve == 1):
             run_fp(name, freq, args.num_fp, args.inst, args.isa, args.precision)
