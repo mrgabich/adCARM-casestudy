@@ -35,26 +35,26 @@ def read_config(config_file):
 
     return name, freq, l1_size, l2_size, l3_size
 
-def read_roofline_data(roofline_file):
+def read_roofline_data(name, roofline_file):
     data = {}
     f = open(roofline_file, "r")
 
     for line in f:
         l = line.split(': ')
         if(l[0] == 'L1'):
-            data['L1'] = l[1].rstrip()
+            data['L1'] = float(l[1].rstrip())
 
         if(l[0] == 'L2'):
-            data['L2'] = l[1].rstrip()
+            data['L2'] = float(l[1].rstrip())
         
         if(l[0] == 'L3'):
-            data['L3'] = l[1].rstrip()
+            data['L3'] = float(l[1].rstrip())
         
         if(l[0] == 'DRAM'):
-            data['DRAM'] = l[1].rstrip()
+            data['DRAM'] = float(l[1].rstrip())
         
         if(l[0] == 'FP'):
-            data['FP'] = l[1].rstrip()
+            data['FP'] = float(l[1].rstrip())
     
     ct = datetime.datetime.now()
     plot_roofline(name, data, ct)
@@ -264,7 +264,7 @@ def main():
         num_st = 1
 
     if args.only_plt != 'none':
-        read_roofline_data(args.result_file)
+        read_roofline_data(name, args.only_plt)
     elif args.test == 'fp':
         raise ValueError('Not implemented yet!')
         """  if(args.curve == 1):
