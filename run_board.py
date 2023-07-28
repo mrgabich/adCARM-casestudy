@@ -25,7 +25,7 @@ def read_config(config_file):
 
         if(l[0] == 'l2_cache'):
             l2_size = l[1].rstrip()
-        
+
         if(l[0] == 'l3_cache'):
             l3_size = l[1].rstrip()
 
@@ -42,9 +42,11 @@ def round_power_of_2(number):
 
 #Run roofline tests
 def run_roofline(name, freq, l1_size, l2_size, l3_size, inst, isa, precision, num_ld, num_st, threads, interleaved, num_ops, dram_bytes):
-    
     data = {}
-    
+
+    print("######################################################################")
+    print("# Compile benchmark generator                                        #")
+    print("######################################################################")
     #Compile benchmark generator
     try:
         subprocess.run("make clean && make isa=" + isa, stderr=subprocess.PIPE, check=True, shell = True)
@@ -52,111 +54,128 @@ def run_roofline(name, freq, l1_size, l2_size, l3_size, inst, isa, precision, nu
         print(f'Error while compiling Benchmark Generator: {e}')
         sys.exit()
 
-    #Run L1 Test 
+    print("######################################################################")
+    print("# Compile & Run L1 Microbenchmark                                    #")
+    print("######################################################################")
+    #Run L1 Test
     num_reps = int(int(l1_size)*1024/(2*mem_inst_size[isa][precision]*(num_ld+num_st)))
-    
+
     try:
         subprocess.run("./Bench/Bench -test MEM -num_LD " + str(num_ld) + " -num_ST " + str(num_st) + " -precision " + precision + " -num_rep " + str(num_reps), check=True, shell = True)
     except subprocess.CalledProcessError as e:
         print(f'Error while compiling L1 MEM Test: {e}')
         sys.exit()
-    
+
     if(interleaved):
         result = subprocess.run(["./bin/test", "-threads", str(threads), "-freq", freq, "--interleaved"], stdout=subprocess.PIPE)
     else:
         result = subprocess.run(["./bin/test", "-threads", str(threads), "-freq", freq], stdout=subprocess.PIPE)
 
     out = result.stdout.decode('utf-8').split(',')
-    
+
     data['L1'] = float(threads*num_reps*(num_ld+num_st)*mem_inst_size[isa][precision]*float(freq))*float(out[1])/float(out[0])
-    
+
+    print("######################################################################")
+    print("# Compile & Run L2 Microbenchmark                                    #")
+    print("######################################################################")
     #Run L2 Test
-    num_reps = int(1024*(int(l1_size) + (int(l2_size) - int(l1_size))/2)/(mem_inst_size[isa][precision]*(num_ld+num_st)))
-    
+    #Check if the target ISA provides L3
+    if (int(l3_size) > 0):
+        num_reps = int(1024*(int(l1_size) + (int(l2_size) - int(l1_size))/2)/(mem_inst_size[isa][precision]*(num_ld+num_st)))
+    else:
+        #Thus, L2 is shared between cores and must consider threads for num_reps
+        num_reps = int(1024*(int(l1_size)*threads + (int(l2_size) - int(l1_size)*threads)/2)/(threads*mem_inst_size[isa][precision]*(num_ld+num_st)))
+
     try:
         subprocess.run("./Bench/Bench -test MEM -num_LD " + str(num_ld) + " -num_ST " + str(num_st) + " -precision " + precision + " -num_rep " + str(num_reps), check=True, shell = True)
     except subprocess.CalledProcessError as e:
         print(f'Error while compiling L2 MEM Test: {e}')
         sys.exit()
-    
+
     if(interleaved):
         result = subprocess.run(["./bin/test", "-threads", str(threads), "-freq", freq, "--interleaved"], stdout=subprocess.PIPE)
     else:
         result = subprocess.run(["./bin/test", "-threads", str(threads), "-freq", freq], stdout=subprocess.PIPE)
-    
+
     out = result.stdout.decode('utf-8').split(',')
 
     data['L2'] = float(threads*num_reps*(num_ld+num_st)*mem_inst_size[isa][precision]*float(freq))*float(out[1])/float(out[0])
 
-    #Run L3 Test 
+    #Run L3 Test
     if (int(l3_size) > 0):
+        print("######################################################################")
+        print("# Compile & Run L3 Microbenchmark                                    #")
+        print("######################################################################")
         num_reps = int(1024*(int(l2_size)*threads + (int(l3_size) - int(l2_size)*threads)/2)/(threads*mem_inst_size[isa][precision]*(num_ld+num_st)))
-        
+
         try:
             subprocess.run("./Bench/Bench -test MEM -num_LD " + str(num_ld) + " -num_ST " + str(num_st) + " -precision " + precision + " -num_rep " + str(num_reps), check=True, shell = True)
         except subprocess.CalledProcessError as e:
             print(f'Error while compiling L2 MEM Test: {e}')
             sys.exit()
-        
+
         if(interleaved):
             result = subprocess.run(["./bin/test", "-threads", str(threads), "-freq", freq, "--interleaved"], stdout=subprocess.PIPE)
         else:
             result = subprocess.run(["./bin/test", "-threads", str(threads), "-freq", freq], stdout=subprocess.PIPE)
-       
+
         out = result.stdout.decode('utf-8').split(',')
 
         data['L3'] = float(threads*num_reps*(num_ld+num_st)*mem_inst_size[isa][precision]*float(freq))*float(out[1])/float(out[0])
     else:
         data['L3'] = float(0.0)
 
+    print("######################################################################")
+    print("# Compile & Run DRAM Microbenchmark                                  #")
+    print("######################################################################")
     #Run DRAM Test
     num_reps = int(dram_bytes*1024/(threads*2*mem_inst_size[isa][precision]*(num_ld+num_st)))
-    
+
     try:
         subprocess.run("./Bench/Bench -test MEM -num_LD " + str(num_ld) + " -num_ST " + str(num_st) + " -precision " + precision + " -num_rep " + str(num_reps), check=True, shell = True)
     except subprocess.CalledProcessError as e:
         print(f'Error while compiling DRAM MEM Test: {e}')
         sys.exit()
-    
+
     if(interleaved):
         result = subprocess.run(["./bin/test", "-threads", str(threads), "-freq", freq, "--interleaved"], stdout=subprocess.PIPE)
     else:
         result = subprocess.run(["./bin/test", "-threads", str(threads), "-freq", freq], stdout=subprocess.PIPE)
-    
+
     out = result.stdout.decode('utf-8').split(',')
-    
+
     data['DRAM'] = float(threads*num_reps*(num_ld+num_st)*mem_inst_size[isa][precision]*float(freq))*float(out[1])/float(out[0])
-    
+
     #Run FP Test
     if(inst == 'fma'):
         factor = 2
     else:
         factor = 1
-    
+
+    print("######################################################################")
+    print("# Compile & Run FLOPs Microbenchmark                                 #")
+    print("######################################################################")
     num_fp = int(num_ops/(factor*ops_fp[isa][precision]))
-    
+
     try:
         subprocess.run("./Bench/Bench -test FLOPS -op " + inst + " -precision " + precision + " -fp " + str(num_fp), check=True, shell = True)
     except subprocess.CalledProcessError as e:
         print(f'Error while compiling DRAM MEM Test: {e}')
         sys.exit()
-    
+
     if(interleaved):
         result = subprocess.run(["./bin/test", "-threads", str(threads), "-freq", freq, "--interleaved"], stdout=subprocess.PIPE)
     else:
         result = subprocess.run(["./bin/test", "-threads", str(threads), "-freq", freq], stdout=subprocess.PIPE)
-    
+
     out = result.stdout.decode('utf-8').split(',')
-    
+
     data['FP'] = float(threads*num_fp*factor*ops_fp[isa][precision]*float(freq)*float(out[1]))/float(out[0])
-    
+
     if(os.path.isdir('Results') == False):
         os.mkdir('Results')
 
     ct = datetime.datetime.now()
-
-    #Plot Roofline
-    # plot_roofline(name, data, ct)
 
     f = open('Results/' + name + '_data_roofline_' + str(ct.time()) + '_' + str(ct.date()) + '.out', 'w')
     for d, v in data.items():
@@ -173,6 +192,21 @@ def run_mem(name, freq, l1_size, l2_size, l3_size, isa, precision, num_ld, num_s
     print('MEM Test') """
 
 def main():
+    print("######################################################################")
+    print("#           ______                 __  _  _                          #")
+    print("#           | ___ \               / _|| |(_)                         #")
+    print("#           | |_/ /  ___    ___  | |_ | | _  _ __    ___             #")
+    print("#           |    /  / _ \  / _ \ |  _|| || || '_ \  / _ \            #")
+    print("#           | |\ \ | (_) || (_) || |  | || || | | ||  __/            #")
+    print("#           \_| \_| \___/  \___/ |_|  |_||_||_| |_| \___|            #")
+    print("#           ___  ___            _        _                           #")
+    print("#           |  \/  |           | |      | |                          #")
+    print("#           | .  . |  ___    __| |  ___ | |                          #")
+    print("#           | |\/| | / _ \  / _` | / _ \| |                          #")
+    print("#           | |  | || (_) || (_| ||  __/| |                          #")
+    print("#           \_|  |_/ \___/  \__,_| \___||_|                          #")
+    print("######################################################################")
+
     parser = argparse.ArgumentParser(description='Script to run micro-benchmarks to construct Cache-Aware Roofline Model')
     parser.add_argument('--test', default='roofline', nargs='?', choices=['fp', 'mem', 'roofline'], help='Type of the test. Roofline test measures the bandwidth of the different memory levels and FP Performance (Default: roofline)')
     parser.add_argument('--inst', default='fma', nargs='?', choices=['fma', 'add', 'mul', 'div'], help='FP Instruction (Default: fma)')
@@ -189,10 +223,13 @@ def main():
     parser.add_argument('--dram_bytes',  default=524288, nargs='?', type = int, help='Size of the array for the DRAM test in KiB (Default: 524288 (512 MiB))')
 
     args = parser.parse_args()
-    print(args)
 
     name, freq, l1_size, l2_size, l3_size = read_config(args.config)
-    print(name, freq, l1_size, l2_size, l3_size)
+    print("#\tTestcase: ",  name,    "     \t\t\t\t     #")
+    print("#\tFrequency: ", freq,    " GHz \t\t\t\t\t     #")
+    print("#\tL1: ",        l1_size, " KB  \t\t\t\t\t\t     #")
+    print("#\tL2: ",        l2_size, " KB  \t\t\t\t\t\t     #")
+    print("#\tL3: ",        l3_size, " KB  \t\t\t\t\t\t     #")
 
     if(args.only_ld == 1):
         num_ld = 1
