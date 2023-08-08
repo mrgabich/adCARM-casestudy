@@ -40,6 +40,47 @@ def round_power_of_2(number):
     else:
         return 1
 
+#Run Latency tests
+def run_latencytest(name, freq, l1_size, l2_size, l3_size, inst, isa, precision, num_ld, num_st, threads, interleaved, num_ops, dram_bytes):
+    data = {}
+
+    print("######################################################################")
+    print("# Compile benchmark generator                                        #")
+    print("######################################################################")
+    #Compile benchmark generator
+    try:
+        subprocess.run("make clean && make isa=" + isa, stderr=subprocess.PIPE, check=True, shell = True)
+    except subprocess.CalledProcessError as e:
+        print(f'Error while compiling Benchmark Generator: {e}')
+        sys.exit()
+
+    print("######################################################################")
+    print("# Compile & Run LatencyTest Microbenchmark                                    #")
+    print("######################################################################")
+    #Run L1 Test
+    index=0
+    while index<=(l2_size*4):
+        if index<(l2_size*4):
+            index+=8
+        num_reps = int(int(index)*1024/(2*mem_inst_size[isa][precision]*(num_ld+num_st)))
+
+        try:
+            subprocess.run("./Bench/Bench -test MEM -num_LD " + str(num_ld) + " -num_ST " + str(num_st) + " -precision " + precision + " -num_rep " + str(num_reps), check=True, shell = True)
+        except subprocess.CalledProcessError as e:
+            print(f'Error while compiling L1 MEM Test: {e}')
+            sys.exit()
+
+        if(interleaved):
+            result = subprocess.run(["./bin/test", "-threads", str(threads), "-freq", freq, "--interleaved"], stdout=subprocess.PIPE)
+        else:
+            result = subprocess.run(["./bin/test", "-threads", str(threads), "-freq", freq], stdout=subprocess.PIPE)
+
+        out = result.stdout.decode('utf-8').split(',')
+        data['L1'] = float(threads*num_reps*(num_ld+num_st)*mem_inst_size[isa][precision]*float(freq))*float(out[1])/float(out[0])
+        print("App Output: ", result)
+        print("L1: ",data['L1'])
+
+
 #Run roofline tests
 def run_roofline(name, freq, l1_size, l2_size, l3_size, inst, isa, precision, num_ld, num_st, threads, interleaved, num_ops, dram_bytes):
     data = {}
@@ -251,6 +292,7 @@ def main():
         else:
             run_mem(name, freq, args.size, args.isa, args.precision, num_ld, num_st) """
     else:
+        run_latencytest(name, freq, l1_size, l2_size, l3_size, args.inst, args.isa, args.precision, num_ld, num_st, args.threads, args.interleaved, args.num_ops, args.dram_bytes)
         run_roofline(name, freq, l1_size, l2_size, l3_size, args.inst, args.isa, args.precision, num_ld, num_st, args.threads, args.interleaved, args.num_ops, args.dram_bytes)
 
 if __name__ == "__main__":
