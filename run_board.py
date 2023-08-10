@@ -21,13 +21,13 @@ def read_config(config_file):
             freq = l[1].rstrip()
 
         if(l[0] == 'l1_cache'):
-            l1_size = l[1].rstrip()
+            l1_size = int(l[1].rstrip())
 
         if(l[0] == 'l2_cache'):
-            l2_size = l[1].rstrip()
+            l2_size = int(l[1].rstrip())
 
         if(l[0] == 'l3_cache'):
-            l3_size = l[1].rstrip()
+            l3_size = int(l[1].rstrip())
 
     return name, freq, l1_size, l2_size, l3_size
 
@@ -43,7 +43,13 @@ def round_power_of_2(number):
 #Run Latency tests
 def run_latencytest(name, freq, l1_size, l2_size, l3_size, inst, isa, precision, num_ld, num_st, threads, interleaved, num_ops, dram_bytes):
     data = {}
+    if(os.path.isdir('Results') == False):
+        os.mkdir('Results')
 
+    ct = datetime.datetime.now()
+
+    f = open('Results/' + name + '_data_latency_' + str(ct.time()) + '_' + str(ct.date()) + '.out', 'w')
+    f.write("threads,memsize,bandwidth"+ '\n')
     print("######################################################################")
     print("# Compile benchmark generator                                        #")
     print("######################################################################")
@@ -59,27 +65,39 @@ def run_latencytest(name, freq, l1_size, l2_size, l3_size, inst, isa, precision,
     print("######################################################################")
     #Run L1 Test
     index=0
-    while index<=(l2_size*4):
-        if index<(l2_size*4):
-            index+=8
-        num_reps = int(int(index)*1024/(2*mem_inst_size[isa][precision]*(num_ld+num_st)))
+    while index<=(l2_size*8):
+        if index<(l2_size*8):
+            index+=4
+        num_threads=1
+        while num_threads<=threads:
+            if (index > (4*l1_size)):
+                num_reps = int(index*1024/(2*mem_inst_size[isa][precision]*(num_ld+num_st)))
+            else:
+                #Check if the target ISA provides L3
+                if (l3_size > 0):
+                    num_reps = int(1024*(l1_size + (index - l1_size)/2)/(mem_inst_size[isa][precision]*(num_ld+num_st)))
+                else:
+                    #Thus, L2 is shared between cores and must consider threads for num_reps
+                    num_reps = int(1024*(l1_size*num_threads + (index - l1_size*num_threads)/2)/(num_threads*mem_inst_size[isa][precision]*(num_ld+num_st)))
 
-        try:
-            subprocess.run("./Bench/Bench -test MEM -num_LD " + str(num_ld) + " -num_ST " + str(num_st) + " -precision " + precision + " -num_rep " + str(num_reps), check=True, shell = True)
-        except subprocess.CalledProcessError as e:
-            print(f'Error while compiling L1 MEM Test: {e}')
-            sys.exit()
+            try:
+                subprocess.run("./Bench/Bench -test MEM -num_LD " + str(num_ld) + " -num_ST " + str(num_st) + " -precision " + precision + " -num_rep " + str(num_reps), check=True, shell = True)
+            except subprocess.CalledProcessError as e:
+                print(f'Error while compiling MEM Test: {e}')
+                sys.exit()
 
-        if(interleaved):
-            result = subprocess.run(["./bin/test", "-threads", str(threads), "-freq", freq, "--interleaved"], stdout=subprocess.PIPE)
-        else:
-            result = subprocess.run(["./bin/test", "-threads", str(threads), "-freq", freq], stdout=subprocess.PIPE)
+            if(interleaved):
+                result = subprocess.run(["./bin/test", "-threads", str(num_threads), "-freq", freq, "--interleaved"], stdout=subprocess.PIPE)
+            else:
+                result = subprocess.run(["./bin/test", "-threads", str(num_threads), "-freq", freq], stdout=subprocess.PIPE)
 
-        out = result.stdout.decode('utf-8').split(',')
-        data['L1'] = float(threads*num_reps*(num_ld+num_st)*mem_inst_size[isa][precision]*float(freq))*float(out[1])/float(out[0])
-        print("App Output: ", result)
-        print("L1: ",data['L1'])
+            out = result.stdout.decode('utf-8').split(',')
+            print("App Output: ", result)
+            print("Threads ",num_threads," mem ",index,"KB bandwith ",float(num_threads*num_reps*(num_ld+num_st)*mem_inst_size[isa][precision]*float(freq))*float(out[1])/float(out[0]))
+            f.write(str(num_threads) + "," + str(index) + "," + str(float(num_threads*num_reps*(num_ld+num_st)*mem_inst_size[isa][precision]*float(freq))*float(out[1])/float(out[0])) + '\n')
+            num_threads*=2
 
+    f.close()
 
 #Run roofline tests
 def run_roofline(name, freq, l1_size, l2_size, l3_size, inst, isa, precision, num_ld, num_st, threads, interleaved, num_ops, dram_bytes):
@@ -99,7 +117,7 @@ def run_roofline(name, freq, l1_size, l2_size, l3_size, inst, isa, precision, nu
     print("# Compile & Run L1 Microbenchmark                                    #")
     print("######################################################################")
     #Run L1 Test
-    num_reps = int(int(l1_size)*1024/(2*mem_inst_size[isa][precision]*(num_ld+num_st)))
+    num_reps = int(l1_size*1024/(2*mem_inst_size[isa][precision]*(num_ld+num_st)))
 
     try:
         subprocess.run("./Bench/Bench -test MEM -num_LD " + str(num_ld) + " -num_ST " + str(num_st) + " -precision " + precision + " -num_rep " + str(num_reps), check=True, shell = True)
@@ -121,11 +139,11 @@ def run_roofline(name, freq, l1_size, l2_size, l3_size, inst, isa, precision, nu
     print("######################################################################")
     #Run L2 Test
     #Check if the target ISA provides L3
-    if (int(l3_size) > 0):
-        num_reps = int(1024*(int(l1_size) + (int(l2_size) - int(l1_size))/2)/(mem_inst_size[isa][precision]*(num_ld+num_st)))
+    if (l3_size > 0):
+        num_reps = int(1024*(l1_size + (l2_size - l1_size)/2)/(mem_inst_size[isa][precision]*(num_ld+num_st)))
     else:
         #Thus, L2 is shared between cores and must consider threads for num_reps
-        num_reps = int(1024*(int(l1_size)*threads + (int(l2_size) - int(l1_size)*threads)/2)/(threads*mem_inst_size[isa][precision]*(num_ld+num_st)))
+        num_reps = int(1024*(l1_size*threads + (l2_size - l1_size*threads)/2)/(threads*mem_inst_size[isa][precision]*(num_ld+num_st)))
 
     try:
         subprocess.run("./Bench/Bench -test MEM -num_LD " + str(num_ld) + " -num_ST " + str(num_st) + " -precision " + precision + " -num_rep " + str(num_reps), check=True, shell = True)
@@ -143,11 +161,11 @@ def run_roofline(name, freq, l1_size, l2_size, l3_size, inst, isa, precision, nu
     data['L2'] = float(threads*num_reps*(num_ld+num_st)*mem_inst_size[isa][precision]*float(freq))*float(out[1])/float(out[0])
 
     #Run L3 Test
-    if (int(l3_size) > 0):
+    if (l3_size > 0):
         print("######################################################################")
         print("# Compile & Run L3 Microbenchmark                                    #")
         print("######################################################################")
-        num_reps = int(1024*(int(l2_size)*threads + (int(l3_size) - int(l2_size)*threads)/2)/(threads*mem_inst_size[isa][precision]*(num_ld+num_st)))
+        num_reps = int(1024*(l2_size*threads + (l3_size - l2_size*threads)/2)/(threads*mem_inst_size[isa][precision]*(num_ld+num_st)))
 
         try:
             subprocess.run("./Bench/Bench -test MEM -num_LD " + str(num_ld) + " -num_ST " + str(num_st) + " -precision " + precision + " -num_rep " + str(num_reps), check=True, shell = True)
@@ -249,7 +267,7 @@ def main():
     print("######################################################################")
 
     parser = argparse.ArgumentParser(description='Script to run micro-benchmarks to construct Cache-Aware Roofline Model')
-    parser.add_argument('--test', default='roofline', nargs='?', choices=['fp', 'mem', 'roofline'], help='Type of the test. Roofline test measures the bandwidth of the different memory levels and FP Performance (Default: roofline)')
+    parser.add_argument('--test', default='roofline', nargs='?', choices=['fp', 'mem', 'roofline', 'latency'], help='Type of the test. Roofline test measures the bandwidth of the different memory levels and FP Performance (Default: roofline)')
     parser.add_argument('--inst', default='fma', nargs='?', choices=['fma', 'add', 'mul', 'div'], help='FP Instruction (Default: fma)')
     parser.add_argument('--arch', default='amd64', nargs='?', choices=['amd64', 'rv64', 'rv32', 'armv7a'], help='Arch (Default: amd64)')
     parser.add_argument('--isa', default='avx', nargs='?', choices=['avx512', 'avx256', 'avx', 'sse', 'scalar','rv64', 'armv7a'], help='ISA (Default: avx)')
@@ -291,8 +309,9 @@ def main():
             run_mem(name, freq, args.size, args.isa, args.precision, num_ld, num_st)
         else:
             run_mem(name, freq, args.size, args.isa, args.precision, num_ld, num_st) """
-    else:
+    elif args.test == 'latency':
         run_latencytest(name, freq, l1_size, l2_size, l3_size, args.inst, args.isa, args.precision, num_ld, num_st, args.threads, args.interleaved, args.num_ops, args.dram_bytes)
+    else:
         run_roofline(name, freq, l1_size, l2_size, l3_size, args.inst, args.isa, args.precision, num_ld, num_st, args.threads, args.interleaved, args.num_ops, args.dram_bytes)
 
 if __name__ == "__main__":
