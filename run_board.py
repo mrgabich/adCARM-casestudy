@@ -50,6 +50,7 @@ def run_latencytest(name, freq, l1_size, l2_size, l3_size, inst, isa, precision,
 
     f = open('Results/' + name + '_data_latency_' + str(ct.time()) + '_' + str(ct.date()) + '.out', 'w')
     f.write("threads,memsize,bandwidth"+ '\n')
+    f.close()
     print("######################################################################")
     print("# Compile benchmark generator                                        #")
     print("######################################################################")
@@ -94,10 +95,11 @@ def run_latencytest(name, freq, l1_size, l2_size, l3_size, inst, isa, precision,
             out = result.stdout.decode('utf-8').split(',')
             print("App Output: ", result)
             print("Threads ",num_threads," mem ",index,"KB bandwith ",float(num_threads*num_reps*(num_ld+num_st)*mem_inst_size[isa][precision]*float(freq))*float(out[1])/float(out[0]))
+            f = open('Results/' + name + '_data_latency_' + str(ct.time()) + '_' + str(ct.date()) + '.out', 'a')
             f.write(str(num_threads) + "," + str(index) + "," + str(float(num_threads*num_reps*(num_ld+num_st)*mem_inst_size[isa][precision]*float(freq))*float(out[1])/float(out[0])) + '\n')
+            f.close()
             num_threads*=2
 
-    f.close()
 
 #Run roofline tests
 def run_roofline(name, freq, l1_size, l2_size, l3_size, inst, isa, precision, num_ld, num_st, threads, interleaved, num_ops, dram_bytes):
