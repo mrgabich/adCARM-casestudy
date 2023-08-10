@@ -71,7 +71,7 @@ def run_latencytest(name, freq, l1_size, l2_size, l3_size, inst, isa, precision,
             index+=4
         num_threads=1
         while num_threads<=threads:
-            if (index > (4*l1_size)):
+            if (index > (8*l1_size)):
                 num_reps = int(index*1024/(2*mem_inst_size[isa][precision]*(num_ld+num_st)))
             else:
                 #Check if the target ISA provides L3
