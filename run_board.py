@@ -64,23 +64,14 @@ def run_latencytest(name, freq, l1_size, l2_size, l3_size, inst, isa, precision,
     print("######################################################################")
     print("# Compile & Run LatencyTest Microbenchmark                                    #")
     print("######################################################################")
-    #Run L1 Test
-    index=0
-    while index<=(l2_size*8):
-        if index<(l2_size*8):
-            index+=4
-        num_threads=1
-        while num_threads<=threads:
-            if (index > (8*l1_size)):
-                num_reps = int(index*1024/(2*mem_inst_size[isa][precision]*(num_ld+num_st)))
-            else:
-                #Check if the target ISA provides L3
-                if (l3_size > 0):
-                    num_reps = int(1024*(l1_size + (index - l1_size)/2)/(mem_inst_size[isa][precision]*(num_ld+num_st)))
-                else:
-                    #Thus, L2 is shared between cores and must consider threads for num_reps
-                    num_reps = int(1024*(l1_size*num_threads + (index - l1_size*num_threads)/2)/(num_threads*mem_inst_size[isa][precision]*(num_ld+num_st)))
-
+    num_threads=1
+    while num_threads<(threads+1):
+        #Run L1 Test
+        stepsize=int((num_threads*l1_size)/16)
+        for index in range(0,num_threads*l1_size,stepsize):
+            if index = 0:
+                index=1
+            num_reps = int(index*1024/(2*mem_inst_size[isa][precision]*(num_ld+num_st)))
             try:
                 subprocess.run("./Bench/Bench -test MEM -num_LD " + str(num_ld) + " -num_ST " + str(num_st) + " -precision " + precision + " -num_rep " + str(num_reps), check=True, shell = True)
             except subprocess.CalledProcessError as e:
@@ -93,12 +84,58 @@ def run_latencytest(name, freq, l1_size, l2_size, l3_size, inst, isa, precision,
                 result = subprocess.run(["./bin/test", "-threads", str(num_threads), "-freq", freq], stdout=subprocess.PIPE)
 
             out = result.stdout.decode('utf-8').split(',')
-            print("App Output: ", result)
-            print("Threads ",num_threads," mem ",index,"KB bandwith ",float(num_threads*num_reps*(num_ld+num_st)*mem_inst_size[isa][precision]*float(freq))*float(out[1])/float(out[0]))
+            print("L1 TEST App Output: ", result)
+            print("L1 TEST Threads ",num_threads," mem ",index,"KB bandwith ",float(num_threads*num_reps*(num_ld+num_st)*mem_inst_size[isa][precision]*float(freq))*float(out[1])/float(out[0]))
             f = open('Results/' + name + '_data_latency_' + str(ct.time()) + '_' + str(ct.date()) + '.out', 'a')
             f.write(str(num_threads) + "," + str(index) + "," + str(float(num_threads*num_reps*(num_ld+num_st)*mem_inst_size[isa][precision]*float(freq))*float(out[1])/float(out[0])) + '\n')
             f.close()
-            num_threads*=2
+        #Run L2 Test
+        stepsize=int((l2_size)/32)
+        for index in range(num_threads*l1_size,l2_size,stepsize):
+            if index = 0:
+                index=1
+            num_reps = int(index*1024/(2*mem_inst_size[isa][precision]*(num_ld+num_st)))
+            try:
+                subprocess.run("./Bench/Bench -test MEM -num_LD " + str(num_ld) + " -num_ST " + str(num_st) + " -precision " + precision + " -num_rep " + str(num_reps), check=True, shell = True)
+            except subprocess.CalledProcessError as e:
+                print(f'Error while compiling MEM Test: {e}')
+                sys.exit()
+
+            if(interleaved):
+                result = subprocess.run(["./bin/test", "-threads", str(num_threads), "-freq", freq, "--interleaved"], stdout=subprocess.PIPE)
+            else:
+                result = subprocess.run(["./bin/test", "-threads", str(num_threads), "-freq", freq], stdout=subprocess.PIPE)
+
+            out = result.stdout.decode('utf-8').split(',')
+            print("L2 TEST App Output: ", result)
+            print("L2 TEST Threads ",num_threads," mem ",index,"KB bandwith ",float(num_threads*num_reps*(num_ld+num_st)*mem_inst_size[isa][precision]*float(freq))*float(out[1])/float(out[0]))
+            f = open('Results/' + name + '_data_latency_' + str(ct.time()) + '_' + str(ct.date()) + '.out', 'a')
+            f.write(str(num_threads) + "," + str(index) + "," + str(float(num_threads*num_reps*(num_ld+num_st)*mem_inst_size[isa][precision]*float(freq))*float(out[1])/float(out[0])) + '\n')
+            f.close()
+        #Run DRAM Test
+        stepsize=int((dram_bytes)/32)
+        for index in range(l2_size,num_threads*l1_size,stepsize):
+            if index = 0:
+                index=1
+            num_reps = int(index*1024/(2*mem_inst_size[isa][precision]*(num_ld+num_st)))
+            try:
+                subprocess.run("./Bench/Bench -test MEM -num_LD " + str(num_ld) + " -num_ST " + str(num_st) + " -precision " + precision + " -num_rep " + str(num_reps), check=True, shell = True)
+            except subprocess.CalledProcessError as e:
+                print(f'Error while compiling MEM Test: {e}')
+                sys.exit()
+
+            if(interleaved):
+                result = subprocess.run(["./bin/test", "-threads", str(num_threads), "-freq", freq, "--interleaved"], stdout=subprocess.PIPE)
+            else:
+                result = subprocess.run(["./bin/test", "-threads", str(num_threads), "-freq", freq], stdout=subprocess.PIPE)
+
+            out = result.stdout.decode('utf-8').split(',')
+            print("DRAM TEST App Output: ", result)
+            print("DRAM TEST Threads ",num_threads," mem ",index,"KB bandwith ",float(num_threads*num_reps*(num_ld+num_st)*mem_inst_size[isa][precision]*float(freq))*float(out[1])/float(out[0]))
+            f = open('Results/' + name + '_data_latency_' + str(ct.time()) + '_' + str(ct.date()) + '.out', 'a')
+            f.write(str(num_threads) + "," + str(index) + "," + str(float(num_threads*num_reps*(num_ld+num_st)*mem_inst_size[isa][precision]*float(freq))*float(out[1])/float(out[0])) + '\n')
+            f.close()
+        num_threads*=2
 
 
 #Run roofline tests
