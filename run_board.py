@@ -111,8 +111,6 @@ def run_latencytest(name, freq, l1_size, l2_size, l3_size, inst, isa, precision,
         #Run DRAM Test
         stepsize=int((dram_bytes)/32)
         for index in range(l2_size,num_threads*l1_size,stepsize):
-            if index = 0:
-                index=1
             num_reps = int(index*1024/(2*mem_inst_size[isa][precision]*(num_ld+num_st)))
             try:
                 subprocess.run("./Bench/Bench -test MEM -num_LD " + str(num_ld) + " -num_ST " + str(num_st) + " -precision " + precision + " -num_rep " + str(num_reps), check=True, shell = True)
