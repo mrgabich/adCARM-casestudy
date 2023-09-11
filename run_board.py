@@ -65,12 +65,10 @@ def run_latencytest(name, freq, l1_size, l2_size, l3_size, inst, isa, precision,
     print("# Compile & Run LatencyTest Microbenchmark                                    #")
     print("######################################################################")
     num_threads=1
-    while num_threads<(threads+1):
+    while num_threads<=threads:
         #Run L1 Test
         stepsize=int((num_threads*l1_size)/16)
-        for index in range(0,num_threads*l1_size,stepsize):
-            if index = 0:
-                index=1
+        for index in range(2,num_threads*l1_size,stepsize):
             num_reps = int(index*1024/(2*mem_inst_size[isa][precision]*(num_ld+num_st)))
             try:
                 subprocess.run("./Bench/Bench -test MEM -num_LD " + str(num_ld) + " -num_ST " + str(num_st) + " -precision " + precision + " -num_rep " + str(num_reps), check=True, shell = True)
@@ -92,8 +90,6 @@ def run_latencytest(name, freq, l1_size, l2_size, l3_size, inst, isa, precision,
         #Run L2 Test
         stepsize=int((l2_size)/32)
         for index in range(num_threads*l1_size,l2_size,stepsize):
-            if index = 0:
-                index=1
             num_reps = int(index*1024/(2*mem_inst_size[isa][precision]*(num_ld+num_st)))
             try:
                 subprocess.run("./Bench/Bench -test MEM -num_LD " + str(num_ld) + " -num_ST " + str(num_st) + " -precision " + precision + " -num_rep " + str(num_reps), check=True, shell = True)
