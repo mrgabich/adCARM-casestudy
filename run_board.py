@@ -67,8 +67,8 @@ def run_latencytest(name, freq, l1_size, l2_size, l3_size, inst, isa, precision,
     num_threads=1
     while num_threads<=threads:
         #Run L1 Test
-        stepsize=int((num_threads*l1_size)/32)
-        for index in range(4,num_threads*l1_size,stepsize):
+        l1stepsize=int((num_threads*l1_size)/32)
+        for index in range(4,num_threads*l1_size,l1stepsize):
             num_reps = int(1024*(l1_size*num_threads + (index - l1_size*num_threads)/2)/(num_threads*mem_inst_size[isa][precision]*(num_ld+num_st)))
             try:
                 subprocess.run("./Bench/Bench -test MEM -num_LD " + str(num_ld) + " -num_ST " + str(num_st) + " -precision " + precision + " -num_rep " + str(num_reps), check=True, shell = True)
@@ -87,9 +87,9 @@ def run_latencytest(name, freq, l1_size, l2_size, l3_size, inst, isa, precision,
             f = open('Results/' + name + '_data_latency_' + str(ct.time()) + '_' + str(ct.date()) + '.out', 'a')
             f.write(str(num_threads) + "," + str(index) + "," + str(float(num_threads*num_reps*(num_ld+num_st)*mem_inst_size[isa][precision]*float(freq))*float(out[1])/float(out[0])) + '\n')
             f.close()
-        #Run L2 Test
-        stepsize=int((l2_size)/32)
-        for index in range(num_threads*l1_size,l2_size,stepsize):
+        #Run L1 to L2 Test (smooth curves)
+        innerstepsize=int((num_threads*l1_size)/8)
+        for index in range(num_threads*l1_size,(num_threads*l1_size)*2,innerstepsize):
             num_reps = int(1024*(l1_size*num_threads + (index - l1_size*num_threads)/2)/(num_threads*mem_inst_size[isa][precision]*(num_ld+num_st)))
             try:
                 subprocess.run("./Bench/Bench -test MEM -num_LD " + str(num_ld) + " -num_ST " + str(num_st) + " -precision " + precision + " -num_rep " + str(num_reps), check=True, shell = True)
@@ -108,9 +108,52 @@ def run_latencytest(name, freq, l1_size, l2_size, l3_size, inst, isa, precision,
             f = open('Results/' + name + '_data_latency_' + str(ct.time()) + '_' + str(ct.date()) + '.out', 'a')
             f.write(str(num_threads) + "," + str(index) + "," + str(float(num_threads*num_reps*(num_ld+num_st)*mem_inst_size[isa][precision]*float(freq))*float(out[1])/float(out[0])) + '\n')
             f.close()
+        #Run L2 Test
+        l2stepsize=int((l2_size)/24)
+        for index in range((num_threads*l1_size)*2,l2_size,l2stepsize):
+            num_reps = int(1024*(l1_size*num_threads + (index - l1_size*num_threads)/2)/(num_threads*mem_inst_size[isa][precision]*(num_ld+num_st)))
+            try:
+                subprocess.run("./Bench/Bench -test MEM -num_LD " + str(num_ld) + " -num_ST " + str(num_st) + " -precision " + precision + " -num_rep " + str(num_reps), check=True, shell = True)
+            except subprocess.CalledProcessError as e:
+                print(f'Error while compiling MEM Test: {e}')
+                sys.exit()
+
+            if(interleaved):
+                result = subprocess.run(["./bin/test", "-threads", str(num_threads), "-freq", freq, "--interleaved"], stdout=subprocess.PIPE)
+            else:
+                result = subprocess.run(["./bin/test", "-threads", str(num_threads), "-freq", freq], stdout=subprocess.PIPE)
+
+            out = result.stdout.decode('utf-8').split(',')
+            print("L2 TEST App Output: ", result)
+            print("L2 TEST Threads ",num_threads," mem ",index,"KB bandwith ",float(num_threads*num_reps*(num_ld+num_st)*mem_inst_size[isa][precision]*float(freq))*float(out[1])/float(out[0]))
+            f = open('Results/' + name + '_data_latency_' + str(ct.time()) + '_' + str(ct.date()) + '.out', 'a')
+            f.write(str(num_threads) + "," + str(index) + "," + str(float(num_threads*num_reps*(num_ld+num_st)*mem_inst_size[isa][precision]*float(freq))*float(out[1])/float(out[0])) + '\n')
+            f.close()
+        #Run L2 to DRAM Test (smooth curves)
+        dramstepsize=int((dram_bytes)/32)
+        innerstepsize=int((dramstepsize)/8)
+        for index in range(l2_size,dramstepsize,innerstepsize):
+            num_reps = int(1024*(l1_size*num_threads + (index - l1_size*num_threads)/2)/(num_threads*mem_inst_size[isa][precision]*(num_ld+num_st)))
+            try:
+                subprocess.run("./Bench/Bench -test MEM -num_LD " + str(num_ld) + " -num_ST " + str(num_st) + " -precision " + precision + " -num_rep " + str(num_reps), check=True, shell = True)
+            except subprocess.CalledProcessError as e:
+                print(f'Error while compiling MEM Test: {e}')
+                sys.exit()
+
+            if(interleaved):
+                result = subprocess.run(["./bin/test", "-threads", str(num_threads), "-freq", freq, "--interleaved"], stdout=subprocess.PIPE)
+            else:
+                result = subprocess.run(["./bin/test", "-threads", str(num_threads), "-freq", freq], stdout=subprocess.PIPE)
+
+            out = result.stdout.decode('utf-8').split(',')
+            print("DRAM TEST App Output: ", result)
+            print("DRAM TEST Threads ",num_threads," mem ",index,"KB bandwith ",float(num_threads*num_reps*(num_ld+num_st)*mem_inst_size[isa][precision]*float(freq))*float(out[1])/float(out[0]))
+            f = open('Results/' + name + '_data_latency_' + str(ct.time()) + '_' + str(ct.date()) + '.out', 'a')
+            f.write(str(num_threads) + "," + str(index) + "," + str(float(num_threads*num_reps*(num_ld+num_st)*mem_inst_size[isa][precision]*float(freq))*float(out[1])/float(out[0])) + '\n')
+            f.close()
         #Run DRAM Test
-        stepsize=int((dram_bytes)/32)
-        for index in range(l2_size,dram_bytes,stepsize):
+        dramstepsize=int((dram_bytes)/24)
+        for index in range(dramstepsize,dram_bytes,dramstepsize):
             num_reps = int(1024*(l1_size*num_threads + (index - l1_size*num_threads)/2)/(num_threads*mem_inst_size[isa][precision]*(num_ld+num_st)))
             try:
                 subprocess.run("./Bench/Bench -test MEM -num_LD " + str(num_ld) + " -num_ST " + str(num_st) + " -precision " + precision + " -num_rep " + str(num_reps), check=True, shell = True)
