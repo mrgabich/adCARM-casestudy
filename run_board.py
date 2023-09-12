@@ -67,9 +67,9 @@ def run_latencytest(name, freq, l1_size, l2_size, l3_size, inst, isa, precision,
     num_threads=1
     while num_threads<=threads:
         #Run L1 Test
-        stepsize=int((num_threads*l1_size)/16)
-        for index in range(2,num_threads*l1_size,stepsize):
-            num_reps = int(index*1024/(2*mem_inst_size[isa][precision]*(num_ld+num_st)))
+        stepsize=int((num_threads*l1_size)/32)
+        for index in range(4,num_threads*l1_size,stepsize):
+            num_reps = int(1024*(l1_size*num_threads + (index - l1_size*num_threads)/2)/(num_threads*mem_inst_size[isa][precision]*(num_ld+num_st)))
             try:
                 subprocess.run("./Bench/Bench -test MEM -num_LD " + str(num_ld) + " -num_ST " + str(num_st) + " -precision " + precision + " -num_rep " + str(num_reps), check=True, shell = True)
             except subprocess.CalledProcessError as e:
@@ -90,7 +90,7 @@ def run_latencytest(name, freq, l1_size, l2_size, l3_size, inst, isa, precision,
         #Run L2 Test
         stepsize=int((l2_size)/32)
         for index in range(num_threads*l1_size,l2_size,stepsize):
-            num_reps = int(index*1024/(2*mem_inst_size[isa][precision]*(num_ld+num_st)))
+            num_reps = int(1024*(l1_size*num_threads + (index - l1_size*num_threads)/2)/(num_threads*mem_inst_size[isa][precision]*(num_ld+num_st)))
             try:
                 subprocess.run("./Bench/Bench -test MEM -num_LD " + str(num_ld) + " -num_ST " + str(num_st) + " -precision " + precision + " -num_rep " + str(num_reps), check=True, shell = True)
             except subprocess.CalledProcessError as e:
@@ -110,8 +110,8 @@ def run_latencytest(name, freq, l1_size, l2_size, l3_size, inst, isa, precision,
             f.close()
         #Run DRAM Test
         stepsize=int((dram_bytes)/32)
-        for index in range(l2_size,num_threads*l1_size,stepsize):
-            num_reps = int(index*1024/(2*mem_inst_size[isa][precision]*(num_ld+num_st)))
+        for index in range(l2_size,dram_bytes,stepsize):
+            num_reps = int(1024*(l1_size*num_threads + (index - l1_size*num_threads)/2)/(num_threads*mem_inst_size[isa][precision]*(num_ld+num_st)))
             try:
                 subprocess.run("./Bench/Bench -test MEM -num_LD " + str(num_ld) + " -num_ST " + str(num_st) + " -precision " + precision + " -num_rep " + str(num_reps), check=True, shell = True)
             except subprocess.CalledProcessError as e:
