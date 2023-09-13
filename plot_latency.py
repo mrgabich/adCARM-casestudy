@@ -36,8 +36,9 @@ plt.legend()
 plt.grid()
 
 # Convert memsize to log2 scale
-plt.xscale('log', base=2)
-x_ticks = [2 ** i for i in range(int(np.log2(min(x_values))), int(np.log2(max(x_values))) + 1)]
+plt.xscale('log', base=8)
+# x_ticks = [2 ** i for i in range(int(np.log2(min(x_values))), int(np.log2(max(x_values))) + 1)]
+x_ticks = [1, 8, 64, 512, 4096, 32768, 262144, 2097152]
 plt.xticks(x_ticks, labels=x_ticks, rotation=45)
 
 # Set y-axis ticks to multiples of 2
@@ -51,7 +52,7 @@ output_filename = "bandwidth_plot_linear_y_axis"
 # Save as PNG
 png_filename = f"{output_filename}.png"
 plt.savefig(png_filename, format='png', dpi=300, bbox_inches='tight')
-
+plt.xlim([1, 2097151])
 # Save as PDF
 pdf_filename = f"{output_filename}.pdf"
 plt.savefig(pdf_filename, format='pdf', bbox_inches='tight')
