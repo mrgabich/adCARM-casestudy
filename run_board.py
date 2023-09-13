@@ -62,12 +62,13 @@ def run_latencytest(name, freq, l1_size, l2_size, l3_size, inst, isa, precision,
         sys.exit()
 
     print("######################################################################")
-    print("# Compile & Run LatencyTest Microbenchmark                                    #")
+    print("# Compile & Run LatencyTest Microbenchmark                           #")
     print("######################################################################")
+    samples_per_cl=16
     num_threads=1
     while num_threads<=threads:
         #Run L1 Test
-        l1stepsize=int((num_threads*l1_size)/32)
+        l1stepsize=int((num_threads*l1_size)/samples_per_cl)
         for index in range(4,num_threads*l1_size,l1stepsize):
             num_reps = int(1024*(l1_size*num_threads + (index - l1_size*num_threads)/2)/(num_threads*mem_inst_size[isa][precision]*(num_ld+num_st)))
             try:
@@ -88,7 +89,7 @@ def run_latencytest(name, freq, l1_size, l2_size, l3_size, inst, isa, precision,
             f.write(str(num_threads) + "," + str(index) + "," + str(float(num_threads*num_reps*(num_ld+num_st)*mem_inst_size[isa][precision]*float(freq))*float(out[1])/float(out[0])) + '\n')
             f.close()
         #Run L1 to L2 Test (smooth curves)
-        innerstepsize=int((num_threads*l1_size)/8)
+        innerstepsize=int((num_threads*l1_size)/(samples_per_cl/2))
         for index in range(num_threads*l1_size,(num_threads*l1_size)*2,innerstepsize):
             num_reps = int(1024*(l1_size*num_threads + (index - l1_size*num_threads)/2)/(num_threads*mem_inst_size[isa][precision]*(num_ld+num_st)))
             try:
@@ -109,7 +110,7 @@ def run_latencytest(name, freq, l1_size, l2_size, l3_size, inst, isa, precision,
             f.write(str(num_threads) + "," + str(index) + "," + str(float(num_threads*num_reps*(num_ld+num_st)*mem_inst_size[isa][precision]*float(freq))*float(out[1])/float(out[0])) + '\n')
             f.close()
         #Run L2 Test
-        l2stepsize=int((l2_size)/24)
+        l2stepsize=int((l2_size)/(samples_per_cl/2))
         for index in range((num_threads*l1_size)*2,l2_size,l2stepsize):
             num_reps = int(1024*(l1_size*num_threads + (index - l1_size*num_threads)/2)/(num_threads*mem_inst_size[isa][precision]*(num_ld+num_st)))
             try:
@@ -130,8 +131,8 @@ def run_latencytest(name, freq, l1_size, l2_size, l3_size, inst, isa, precision,
             f.write(str(num_threads) + "," + str(index) + "," + str(float(num_threads*num_reps*(num_ld+num_st)*mem_inst_size[isa][precision]*float(freq))*float(out[1])/float(out[0])) + '\n')
             f.close()
         #Run L2 to DRAM Test (smooth curves)
-        dramstepsize=int((dram_bytes)/32)
-        innerstepsize=int((dramstepsize)/8)
+        dramstepsize=int((dram_bytes)/(samples_per_cl))
+        innerstepsize=int((dramstepsize)/(samples_per_cl/2))
         for index in range(l2_size,dramstepsize,innerstepsize):
             num_reps = int(1024*(l1_size*num_threads + (index - l1_size*num_threads)/2)/(num_threads*mem_inst_size[isa][precision]*(num_ld+num_st)))
             try:
@@ -152,7 +153,7 @@ def run_latencytest(name, freq, l1_size, l2_size, l3_size, inst, isa, precision,
             f.write(str(num_threads) + "," + str(index) + "," + str(float(num_threads*num_reps*(num_ld+num_st)*mem_inst_size[isa][precision]*float(freq))*float(out[1])/float(out[0])) + '\n')
             f.close()
         #Run DRAM Test
-        dramstepsize=int((dram_bytes)/24)
+        dramstepsize=int((dram_bytes)/(samples_per_cl/2))
         for index in range(dramstepsize,dram_bytes,dramstepsize):
             num_reps = int(1024*(l1_size*num_threads + (index - l1_size*num_threads)/2)/(num_threads*mem_inst_size[isa][precision]*(num_ld+num_st)))
             try:
